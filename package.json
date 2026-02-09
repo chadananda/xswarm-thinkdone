@@ -8,7 +8,8 @@
   "bin": { "memory": "./src/memory.js" },
   "scripts": {
     "test": "node tests/memory.test.js",
-    "setup": "node src/memory.js setup"
+    "setup": "node src/memory.js setup",
+    "plan": "node scripts/serve-plan.js"
   },
   "dependencies": {
     "@libsql/client": "^0.14",
