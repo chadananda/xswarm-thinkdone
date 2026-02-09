@@ -1,6 +1,9 @@
 {
   "name": "xswarm-thinkdone",
   "version": "0.1.0",
+  "description": "Simple personal planning tool to leverage AI for optimizing planning and productivity. Like GTD but with an expert personal assistant helping manage it.",
+  "author": "Chad Jones (https://xswarm.ai)",
+  "license": "MIT",
   "type": "module",
   "bin": { "memory": "./src/memory.js" },
   "scripts": {
