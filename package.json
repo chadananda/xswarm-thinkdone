@@ -1,0 +1,14 @@
+{
+  "name": "xswarm-thinkdone",
+  "version": "0.1.0",
+  "type": "module",
+  "bin": { "memory": "./src/memory.js" },
+  "scripts": {
+    "test": "node tests/memory.test.js",
+    "setup": "node src/memory.js setup"
+  },
+  "dependencies": {
+    "@libsql/client": "^0.14",
+    "@huggingface/transformers": "^3"
+  }
+}

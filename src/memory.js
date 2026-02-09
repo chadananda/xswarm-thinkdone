@@ -1,0 +1,190 @@
+#!/usr/bin/env node
+// xswarm-thinkdone: semantic memory for daily planning sessions
+// libsql (local/Turso) + @huggingface/transformers BGE-small-en-v1.5
+import { createClient } from '@libsql/client';
+import { dirname, join } from 'path';
+import { fileURLToPath } from 'url';
+import { existsSync, statSync, mkdirSync } from 'fs';
+// --- config ---
+const __dir = dirname(fileURLToPath(import.meta.url));
+let DB_PATH = process.env.THINKDONE_DB || join(__dir, '..', '..', 'memory.db');
+const TURSO_URL = process.env.THINKDONE_TURSO_URL || '';
+const TURSO_TOKEN = process.env.THINKDONE_TURSO_TOKEN || '';
+const TYPES = new Set(['decision','blocker','status','pattern','dependency','commitment','idea','insight']);
+// --- embedding (lazy) ---
+let _emb = null;
+const getEmb = async () => _emb ??= await (await import('@huggingface/transformers')).pipeline('feature-extraction', 'Xenova/bge-small-en-v1.5', { dtype: 'fp32' });
+const embed = async text => Array.from((await (await getEmb())(text, { pooling: 'cls', normalize: true })).data);
+// --- db ---
+const getDb = (path = DB_PATH) => {
+  const dir = dirname(path);
+  if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
+  return TURSO_URL && TURSO_TOKEN
+    ? createClient({ url: `file:${path}`, syncUrl: TURSO_URL, authToken: TURSO_TOKEN })
+    : createClient({ url: `file:${path}` });
+};
+const schema = db => db.batch([
+  { sql: `CREATE TABLE IF NOT EXISTS memories (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, content TEXT NOT NULL,
+    project TEXT DEFAULT '', type TEXT DEFAULT 'insight',
+    created_at TEXT NOT NULL, superseded_by INTEGER DEFAULT NULL,
+    embedding F32_BLOB(384))`, args: [] },
+  { sql: `CREATE INDEX IF NOT EXISTS memories_idx ON memories
+    (libsql_vector_idx(embedding, 'compress_neighbors=float8', 'max_neighbors=50'))`, args: [] }
+]);
+const sync = db => TURSO_URL ? db.sync().catch(() => {}) : Promise.resolve();
+// --- queries ---
+const store = (db, content, project, type, vec) =>
+  db.execute({ sql: 'INSERT INTO memories (content, project, type, created_at, embedding) VALUES (?,?,?,?,vector(?))', args: [content, project, type, new Date().toISOString(), JSON.stringify(vec)] }).then(() => sync(db));
+const search = (db, vec, n = 5, inclSup = false) => {
+  const sup = inclSup ? '' : 'AND m.superseded_by IS NULL';
+  return db.execute({ sql: `SELECT m.id, m.content, m.project, m.type, m.created_at, m.superseded_by FROM vector_top_k('memories_idx', vector(?), ${Math.min(n*3,100)}) AS v JOIN memories AS m ON m.rowid = v.id WHERE 1=1 ${sup}`, args: [JSON.stringify(vec)] }).then(r => r.rows.slice(0, n));
+};
+const q = (db, sql, args = []) => db.execute({ sql, args }).then(r => r.rows);
+// --- recall helpers ---
+const TYPE_RE = /^(?:DECISION|BLOCKER|STATUS|PATTERN|DEPENDENCY|COMMITMENT|IDEA|INSIGHT|RESOLVED)\s*/i;
+const strip = c => { const m = c.match(TYPE_RE); if (!m) return c; const r = c.slice(m[0].length); return r.startsWith('[') ? r.replace(/^(\[[^\]]+\])\s*:\s*/, '$1 ') : r.startsWith(':') ? r.replace(/^:\s*/, '') : r; };
+// --- commands ---
+const cmds = {
+  async setup(db) {
+    await schema(db);
+    const mode = TURSO_URL ? `Turso (${TURSO_URL})` : 'local';
+    console.log(`Database: ${DB_PATH} (${mode})`);
+    console.log('Testing embedding model (first run downloads ~100MB)...');
+    const vec = await embed('test memory');
+    console.log(`  ${vec.length} dimensions — setup complete.`);
+  },
+  async store(db, { _: [content], project = '', type = 'insight' }) {
+    const t = type.toLowerCase();
+    if (!TYPES.has(t)) { console.log(`Invalid type. Valid: ${[...TYPES].sort().join(', ')}`); process.exit(1); }
+    await schema(db);
+    await store(db, content, project, t, await embed(content));
+    console.log(`Stored ${t}${project ? ` [${project}]` : ''}: ${content}`);
+  },
+  async search(db, { _: [query], n = 5, includeSuperseded = false }) {
+    await schema(db);
+    const rows = await search(db, await embed(query), n, includeSuperseded);
+    if (!rows.length) return console.log('No results.');
+    rows.forEach(r => console.log(`  #${r.id} ${r.type}${r.project ? ` [${r.project}]` : ''}: ${r.content}${r.superseded_by ? ' [SUPERSEDED]' : ''}`));
+  },
+  async recall(db) {
+    await schema(db);
+    const cutoff = new Date(Date.now() - 3 * 86400000).toISOString();
+    const sections = [], focus = new Set();
+    // blockers
+    const bl = await q(db, 'SELECT content, project FROM memories WHERE type=? AND superseded_by IS NULL ORDER BY created_at DESC', ['blocker']);
+    if (bl.length) { bl.forEach(r => r.project && focus.add(r.project)); sections.push(['BLOCKERS', bl.map(r => `  - ${strip(r.content)}`)]); }
+    // commitments
+    const cm = await q(db, 'SELECT content, project FROM memories WHERE type=? AND superseded_by IS NULL ORDER BY created_at DESC', ['commitment']);
+    if (cm.length) { cm.forEach(r => r.project && focus.add(r.project)); sections.push(['COMMITMENTS', cm.map(r => `  - ${strip(r.content)}`)]); }
+    // recent decisions
+    const dc = await q(db, 'SELECT content FROM memories WHERE type=? AND created_at>=? ORDER BY created_at DESC', ['decision', cutoff]);
+    if (dc.length) sections.push(['RECENT DECISIONS (3 days)', dc.map(r => `  - ${strip(r.content)}`)]);
+    // patterns
+    const pt = await q(db, 'SELECT content FROM memories WHERE type=? AND superseded_by IS NULL ORDER BY created_at DESC', ['pattern']);
+    if (pt.length) sections.push(['PATTERNS', pt.map(r => `  - ${strip(r.content)}`)]);
+    // dependencies
+    const dp = await q(db, 'SELECT content FROM memories WHERE type=? AND superseded_by IS NULL ORDER BY created_at DESC', ['dependency']);
+    if (dp.length) sections.push(['DEPENDENCIES', dp.map(r => `  - ${strip(r.content)}`)]);
+    // context: statuses/ideas for focus projects + recent
+    const fp = [...focus].sort();
+    const ctxSql = fp.length
+      ? `SELECT content FROM memories WHERE type IN ('status','idea') AND superseded_by IS NULL AND (project IN (${fp.map(()=>'?').join(',')}) OR created_at>=?) ORDER BY type, created_at DESC`
+      : `SELECT content FROM memories WHERE type IN ('status','idea') AND superseded_by IS NULL AND created_at>=? ORDER BY type, created_at DESC`;
+    const ctx = await q(db, ctxSql, fp.length ? [...fp, cutoff] : [cutoff]);
+    if (ctx.length) sections.push([`ACTIVE CONTEXT (focus: ${fp.join(', ') || 'general'})`, ctx.map(r => `  - ${strip(r.content)}`)]);
+    // output
+    const d = new Date();
+    console.log(`=== ThinkDone Memory Context (${d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}) ===\n`);
+    if (!sections.length) console.log('No active memories. Use "store" to add some.');
+    sections.forEach(([h, lines]) => { console.log(`${h}:`); lines.forEach(l => console.log(l)); console.log(); });
+    console.log('===');
+  },
+  async recent(db, { days = 3 }) {
+    await schema(db);
+    const rows = await q(db, 'SELECT id, content, project, type, superseded_by FROM memories WHERE created_at>=? ORDER BY created_at DESC', [new Date(Date.now() - days * 86400000).toISOString()]);
+    if (!rows.length) return console.log(`No memories in last ${days} days.`);
+    rows.forEach(r => console.log(`  #${r.id} ${r.type}${r.project ? ` [${r.project}]` : ''}: ${r.content}${r.superseded_by ? ' [SUPERSEDED]' : ''}`));
+  },
+  async project(db, { _: [name] }) {
+    await schema(db);
+    const rows = await q(db, 'SELECT id, content, type FROM memories WHERE project=? AND superseded_by IS NULL ORDER BY type, created_at DESC', [name]);
+    if (!rows.length) return console.log(`No active memories for '${name}'.`);
+    rows.forEach(r => console.log(`  #${r.id} ${r.type}: ${r.content}`));
+  },
+  async supersede(db, { _: [id, content], type, project }) {
+    await schema(db);
+    const old = (await q(db, 'SELECT project, type, content FROM memories WHERE id=?', [+id]))[0];
+    if (!old) { console.log(`Memory #${id} not found.`); process.exit(1); }
+    const vec = await embed(content);
+    const r = await db.execute({ sql: 'INSERT INTO memories (content, project, type, created_at, embedding) VALUES (?,?,?,?,vector(?))', args: [content, project ?? old.project, type ?? old.type, new Date().toISOString(), JSON.stringify(vec)] });
+    const newId = Number(r.lastInsertRowid);
+    await db.execute({ sql: 'UPDATE memories SET superseded_by=? WHERE id=?', args: [newId, +id] });
+    await sync(db);
+    console.log(`Superseded #${id} -> #${newId}\n  OLD: ${old.content}\n  NEW: ${content}`);
+  },
+  async consolidate(db) {
+    await schema(db);
+    let n = 0;
+    for (const t of ['status', 'pattern']) {
+      const groups = await q(db, 'SELECT project, COUNT(*) as cnt FROM memories WHERE type=? AND superseded_by IS NULL GROUP BY project HAVING cnt>1', [t]);
+      for (const g of groups) {
+        const dupes = await q(db, 'SELECT id FROM memories WHERE type=? AND project=? AND superseded_by IS NULL ORDER BY created_at DESC', [t, g.project]);
+        for (const old of dupes.slice(1)) { await db.execute({ sql: 'UPDATE memories SET superseded_by=? WHERE id=?', args: [dupes[0].id, old.id] }); n++; }
+      }
+    }
+    await sync(db);
+    const active = (await q(db, 'SELECT COUNT(*) as n FROM memories WHERE superseded_by IS NULL'))[0].n;
+    const total = (await q(db, 'SELECT COUNT(*) as n FROM memories'))[0].n;
+    console.log(`Consolidated ${n} redundant memories.\n  Active: ${active} | Total: ${total} | Archived: ${total - active}`);
+  },
+  async stats(db) {
+    await schema(db);
+    const total = (await q(db, 'SELECT COUNT(*) as n FROM memories'))[0].n;
+    const active = (await q(db, 'SELECT COUNT(*) as n FROM memories WHERE superseded_by IS NULL'))[0].n;
+    const types = await q(db, 'SELECT type, COUNT(*) as n FROM memories WHERE superseded_by IS NULL GROUP BY type ORDER BY type');
+    const projects = await q(db, "SELECT project, COUNT(*) as n FROM memories WHERE superseded_by IS NULL AND project!='' GROUP BY project ORDER BY n DESC");
+    console.log(`=== ThinkDone Memory Stats (${TURSO_URL ? 'Turso' : 'local'}) ===`);
+    console.log(`Total: ${total} | Active: ${active} | Archived: ${total - active}`);
+    if (types.length) { console.log('\nBy type:'); types.forEach(r => console.log(`  ${r.type}: ${r.n}`)); }
+    if (projects.length) { console.log('\nBy project:'); projects.forEach(r => console.log(`  ${r.project}: ${r.n}`)); }
+    if (existsSync(DB_PATH)) { const sz = statSync(DB_PATH).size; console.log(`\nDB size: ${sz >= 1048576 ? (sz/1048576).toFixed(1)+' MB' : (sz/1024).toFixed(1)+' KB'}`); }
+  }
+};
+// --- arg parsing ---
+const parseArgs = argv => {
+  const r = { _: [] };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === '-p' || a === '--project') r.project = argv[++i];
+    else if (a === '-t' || a === '--type') r.type = argv[++i];
+    else if (a === '-n') r.n = +argv[++i];
+    else if (a === '--days') r.days = +argv[++i];
+    else if (a === '--include-superseded') r.includeSuperseded = true;
+    else if (a === '--db') r.db = argv[++i];
+    else r._.push(a);
+  }
+  return r;
+};
+// --- main ---
+const USAGE = `xswarm-thinkdone: semantic memory for daily planning
+Commands:
+  setup                               Create DB, test embeddings
+  store <text> [-p project] [-t type]  Store a memory
+  search <query> [-n 5]               Semantic search
+  recall                              Morning context loader
+  recent [--days 3]                   Recent memories
+  project <name>                      Project memories
+  supersede <id> <text> [-t type]     Supersede old → new
+  consolidate                         Weekly compression
+  stats                               Memory health
+Env: THINKDONE_DB, THINKDONE_TURSO_URL, THINKDONE_TURSO_TOKEN`;
+const argv = process.argv.slice(2);
+if (!argv.length) { console.log(USAGE); process.exit(0); }
+const dbIdx = argv.indexOf('--db');
+if (dbIdx !== -1) { DB_PATH = argv[dbIdx + 1]; argv.splice(dbIdx, 2); }
+const [cmd, ...rest] = argv;
+const args = parseArgs(rest);
+if (!cmds[cmd]) { console.log(USAGE); process.exit(1); }
+const db = getDb();
+try { await cmds[cmd](db, args); } finally { db.close(); }
