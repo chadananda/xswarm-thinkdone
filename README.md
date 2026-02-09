@@ -24,6 +24,31 @@ Because **done is the engine of more.** Your planning now has a team of strategi
 5. **Promotion Pulse** — at least one marketing/growth action every single day
 6. **Update Plans** — ThinkDone updates your project files and daily log
 
+## Using with Claude Code / Cowork
+
+Open the ThinkDone workspace folder in Claude Code or Cowork. The `.claude/` directory provides full integration:
+
+| Command | What it does |
+|---------|-------------|
+| `/morning-meeting` | Full daily planning session with structured agenda |
+| `/memory` | Store, search, or recall memories across sessions |
+| `/context-search` | Auto-enriches responses with relevant prior context (runs as subagent) |
+| `/session-wrapup` | End-of-session: extracts decisions, stores memories, updates daily log |
+
+### Workspace Layout
+
+```
+ThinkDone.ai/                  # User workspace (Dropbox, no git)
+├── .claude/                   # Claude integration
+│   ├── CLAUDE.md              # Project instructions (auto-loaded)
+│   ├── commands/              # Slash commands
+│   └── memory.db              # Semantic memory (user data)
+├── plans/                     # Projects, weekly tasks, daily log
+└── xswarm-thinkdone/          # Product source code (this repo)
+```
+
+Every planning response is automatically enriched with relevant memories from prior sessions — so your AI planning team remembers everything you've discussed, decided, and committed to.
+
 ## Setup
 
 ```bash
@@ -67,7 +92,7 @@ memory stats                           # Health check
 
 | Variable | Required | Description |
 |----------|----------|-------------|
-| `THINKDONE_DB` | Yes | Absolute path to the SQLite database file |
+| `THINKDONE_DB` | No | Override DB path (defaults to `../.claude/memory.db`) |
 | `THINKDONE_TURSO_URL` | No | Turso cloud sync URL for multi-device |
 | `THINKDONE_TURSO_TOKEN` | No | Turso auth token |
 
