@@ -29,19 +29,10 @@ Because **done is the engine of more.** Your planning now has a team of strategi
 ```bash
 cd xswarm-thinkdone
 npm install
+npm run setup    # Downloads embedding model (~100MB, first time only)
 ```
 
-Create a `.env` in your workspace root (parent directory):
-
-```
-THINKDONE_DB=/path/to/ThinkDone.ai/memory.db
-```
-
-First-time setup (downloads the embedding model ~100MB):
-
-```bash
-npm run setup
-```
+The memory database is created automatically at `../.claude/memory.db` — no configuration needed for the standard workspace layout. See `.env.example` for optional Turso cloud sync credentials.
 
 ## Memory CLI
 
