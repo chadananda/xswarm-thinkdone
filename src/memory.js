@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 import { existsSync, statSync, mkdirSync } from 'fs';
 // --- config ---
 const __dir = dirname(fileURLToPath(import.meta.url));
-let DB_PATH = process.env.THINKDONE_DB || join(__dir, '..', '..', 'memory.db');
+let DB_PATH = process.env.THINKDONE_DB || join(__dir, '..', '..', '.claude', 'memory.db');
 const TURSO_URL = process.env.THINKDONE_TURSO_URL || '';
 const TURSO_TOKEN = process.env.THINKDONE_TURSO_TOKEN || '';
 const TYPES = new Set(['decision','blocker','status','pattern','dependency','commitment','idea','insight']);
