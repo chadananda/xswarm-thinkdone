@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+@theme {
+  /* Paper/pencil palette — change these to retheme the entire site */
+  --color-paper: #f4efe6;
+  --color-paper-bright: #fffdf8;
+  --color-ink: #3a3226;
+  --color-ink-light: #7a6a5a;
+  --color-ink-muted: #a09080;
+  --color-ink-faint: #c4b5a0;
+  --color-rule: #d5cec3;
+  --color-margin: #e8c4c4;
+  --color-accent: #8b4513;
+  --color-gold: #b8860b;
+  --color-check: #88aa77;
+  --color-success: #6a8a5a;
+  --color-danger: #bb4444;
+  --color-done: #b0a898;
+  --color-purple: #6a5acd;
+  --color-tag-bg: oklch(0.7 0.03 70 / 0.15);
+  --color-hover: oklch(0.7 0.03 60 / 0.10);
+  --color-grid: oklch(0.78 0.02 70 / 0.40);
+
+  /* Font families */
+  --font-hand: 'Patrick Hand', cursive;
+  --font-display: 'Caveat', cursive;
+  --font-ui: 'Inter', sans-serif;
+}
+
+/* Architect's graph paper background */
+body {
+  font-family: var(--font-hand);
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  min-height: 100vh;
+  background-image:
+    linear-gradient(var(--color-grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--color-grid) 1px, transparent 1px);
+  background-size: 20px 20px;
+}

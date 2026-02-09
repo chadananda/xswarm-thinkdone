@@ -8,3 +8,4 @@ tmp/
 .claude/context/
 .DS_Store
 dist/
+.astro/

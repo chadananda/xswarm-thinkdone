@@ -5,14 +5,28 @@
   "author": "Chad Jones (https://xswarm.ai)",
   "license": "MIT",
   "type": "module",
-  "bin": { "memory": "./src/memory.js" },
+  "bin": {
+    "memory": "./src/memory.js"
+  },
   "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
     "test": "node tests/memory.test.js",
-    "setup": "node src/memory.js setup",
-    "plan": "node scripts/serve-plan.js"
+    "setup": "node src/memory.js setup"
   },
   "dependencies": {
+    "@astrojs/node": "^9",
+    "@astrojs/svelte": "^7",
+    "@huggingface/transformers": "^3",
     "@libsql/client": "^0.14",
-    "@huggingface/transformers": "^3"
+    "@tailwindcss/vite": "^4",
+    "astro": "^5",
+    "svelte": "^5",
+    "tailwindcss": "^4"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2",
+    "playwright": "^1.58.2"
   }
 }
