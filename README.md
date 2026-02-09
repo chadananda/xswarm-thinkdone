@@ -1,24 +1,28 @@
 # ThinkDone.ai
 
-Your AI strategic planning assistant. Like GTD but with an expert personal assistant helping manage it.
+**Your AI-powered todo list with a planning team built in.**
 
-ThinkDone runs daily morning meetings, manages priorities across your projects, flags blockers, tracks commitments, and helps you make smarter decisions about where to spend your time. It doesn't just manage tasks — it brings strategic perspective to your planning.
+Imagine starting every morning with a personal coach, an executive assistant, a productivity expert, and a strategic planning team — all focused on making sure you progress on every front. That's ThinkDone.
+
+You keep your projects and goals in simple markdown files. Each morning, ThinkDone reads everything, knows your full landscape, and runs a focused planning meeting: surfacing blockers, challenging your priorities, catching things slipping through the cracks, and picking the 3-5 actions that will move the needle most today.
+
+Because **done is the engine of more.** Your planning now has a team of strategic thinkers making sure you get stuff done. Think Done!
 
 ## How It Works
 
-1. Keep project files in a `plans/` folder (markdown)
-2. Run a daily morning meeting with Claude as your AI chief of staff
-3. Claude reads all your projects, surfaces blockers, challenges your priorities, and recommends today's top 3-5 actions
-4. Decisions, commitments, and patterns are stored in semantic memory so nothing gets lost between sessions
+1. Keep your projects and goals in a `plans/` folder (plain markdown)
+2. Run your daily morning meeting (~15 min) with AI as your planning team
+3. ThinkDone reads all your projects, flags what's stuck, challenges where you're spending time, and recommends today's priorities
+4. Decisions, commitments, and patterns are remembered across sessions — nothing falls through the cracks
 
-### Morning Meeting Agenda (~15 min)
+### Your Morning Meeting (~15 min)
 
-1. **Quick Wins** — 5-minute tasks to clear the deck
-2. **Blocker Scan** — what's stuck, what's at risk
-3. **Strategic Pulse** — are priorities still right across all projects?
-4. **Today's Top 3-5** — specific, actionable priorities
-5. **Promotion Pulse** — at least one marketing/growth action daily
-6. **Update Plans** — Claude updates project files and daily log
+1. **Quick Wins** — clear the 5-minute stuff so it stops taking up mental space
+2. **Blocker Scan** — what's stuck? what's at risk? who's waiting on you?
+3. **Strategic Pulse** — are priorities still right across all projects? are you spreading too thin?
+4. **Today's Top 3-5** — specific actions, not vague goals. "Finish Stripe integration," not "work on billing."
+5. **Promotion Pulse** — at least one marketing/growth action every single day
+6. **Update Plans** — ThinkDone updates your project files and daily log
 
 ## Setup
 
@@ -41,17 +45,17 @@ npm run setup
 
 ## Memory CLI
 
-The `memory` command gives ThinkDone persistent recall across sessions:
+ThinkDone remembers everything across sessions — decisions, blockers, commitments, patterns — so your planning team never loses context:
 
 ```bash
-memory recall                          # Morning context — blockers, commitments, decisions, patterns
+memory recall                          # Morning context — what your planning team needs to know
 memory store "Ship v1 this week" \
-  --type decision --project thinkdone  # Store a decision
+  --type decision --project thinkdone  # Capture a decision
 memory search "shipping timeline"      # Semantic search across all memories
 memory recent --days 3                 # What happened recently
 memory project thinkdone              # Everything about one project
 memory supersede 42 "Ship next week"  # Update an outdated memory
-memory consolidate                     # Weekly cleanup — deduplicate statuses/patterns
+memory consolidate                     # Weekly cleanup — deduplicate stale info
 memory stats                           # Health check
 ```
 
@@ -62,11 +66,11 @@ memory stats                           # Health check
 | `decision` | Choices made (with date context) |
 | `blocker` | Things preventing progress |
 | `status` | Current state of a project |
-| `pattern` | Recurring observations |
+| `pattern` | Recurring observations your planning team spots |
 | `dependency` | Cross-project dependencies |
 | `commitment` | Promises with deadlines |
 | `idea` | Future possibilities |
-| `insight` | Learned lessons |
+| `insight` | Lessons learned |
 
 ## Environment Variables
 
@@ -78,9 +82,11 @@ memory stats                           # Health check
 
 ## Roadmap
 
-**Phase 1 (now):** Morning meetings + semantic memory via Claude Code/Cowork
-**Phase 2:** MCP integrations — email, calendar, Slack, CRM. ThinkDone becomes an AI chief of staff that can act, not just plan.
-**Phase 3:** End-to-end encryption, team access controls, audit trails. Enterprise-grade trust.
+**Phase 1 (now):** Daily morning meetings + persistent memory via Claude Code/Cowork. Your AI planning team learns your world and helps you get more done every day.
+
+**Phase 2:** MCP integrations — email, calendar, Slack, CRM. Your planning team can now act on your behalf, not just advise.
+
+**Phase 3:** End-to-end encryption, team access controls, audit trails. Enterprise-grade trust for organizations that want their own AI planning team.
 
 ## Development
 

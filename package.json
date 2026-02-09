@@ -1,7 +1,7 @@
 {
   "name": "xswarm-thinkdone",
   "version": "0.1.0",
-  "description": "Simple personal planning tool to leverage AI for optimizing planning and productivity. Like GTD but with an expert personal assistant helping manage it.",
+  "description": "Your AI-powered todo list with a planning team built in. A personal coach, executive assistant, and productivity expert — all in your morning meeting. Done is the engine of more!",
   "author": "Chad Jones (https://xswarm.ai)",
   "license": "MIT",
   "type": "module",
