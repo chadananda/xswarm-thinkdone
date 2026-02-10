@@ -30,7 +30,20 @@ const schema = db => db.batch([
     created_at TEXT NOT NULL, superseded_by INTEGER DEFAULT NULL,
     embedding F32_BLOB(384))`, args: [] },
   { sql: `CREATE INDEX IF NOT EXISTS memories_idx ON memories
-    (libsql_vector_idx(embedding, 'compress_neighbors=float8', 'max_neighbors=50'))`, args: [] }
+    (libsql_vector_idx(embedding, 'compress_neighbors=float8', 'max_neighbors=50'))`, args: [] },
+  { sql: `CREATE TABLE IF NOT EXISTS routines (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL, kind TEXT NOT NULL DEFAULT 'habit',
+    frequency TEXT NOT NULL DEFAULT 'daily',
+    days TEXT DEFAULT NULL, time_slot TEXT DEFAULT 'anytime',
+    project TEXT DEFAULT '', minutes INTEGER DEFAULT 15,
+    active INTEGER DEFAULT 1,
+    created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`, args: [] },
+  { sql: `CREATE TABLE IF NOT EXISTS completions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    routine_id INTEGER NOT NULL, completed_date TEXT NOT NULL,
+    completed_at TEXT NOT NULL,
+    FOREIGN KEY (routine_id) REFERENCES routines(id))`, args: [] }
 ]);
 const sync = db => TURSO_URL ? db.sync().catch(() => {}) : Promise.resolve();
 // --- queries ---
@@ -151,6 +164,147 @@ const cmds = {
     if (existsSync(DB_PATH)) { const sz = statSync(DB_PATH).size; console.log(`\nDB size: ${sz >= 1048576 ? (sz/1048576).toFixed(1)+' MB' : (sz/1024).toFixed(1)+' KB'}`); }
   }
 };
+// --- habit helpers ---
+const FREQS = new Set(['daily', 'weekdays', 'weekends', 'weekly', 'once']);
+const SLOTS = new Set(['morning', 'midday', 'evening', 'anytime']);
+const DAY_NAMES = ['sun','mon','tue','wed','thu','fri','sat'];
+const isDue = (r, dayName) => {
+  if (r.frequency === 'daily') return true;
+  if (r.frequency === 'weekdays') return !['sat','sun'].includes(dayName);
+  if (r.frequency === 'weekends') return ['sat','sun'].includes(dayName);
+  if (r.frequency === 'weekly') return (JSON.parse(r.days || '[]')).includes(dayName);
+  if (r.frequency === 'once') return true;
+  return false;
+};
+const calcStreak = (completionDates, frequency, days) => {
+  const dateSet = new Set(completionDates);
+  const todayStr = new Date().toISOString().slice(0, 10);
+  let streak = dateSet.has(todayStr) ? 1 : 0;
+  for (let i = 1; i <= 365; i++) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    const ds = d.toISOString().slice(0, 10);
+    const dn = DAY_NAMES[d.getDay()];
+    if (frequency === 'weekdays' && ['sat','sun'].includes(dn)) continue;
+    if (frequency === 'weekends' && !['sat','sun'].includes(dn)) continue;
+    if (frequency === 'weekly' && !(JSON.parse(days || '[]')).includes(dn)) continue;
+    if (dateSet.has(ds)) streak++;
+    else break;
+  }
+  return streak;
+};
+// --- habit sub-commands ---
+const habitCmds = {
+  async add(db, args) {
+    const name = args._[0];
+    if (!name) { console.log('Usage: habit add "<name>" [--freq daily] [--slot morning] [--days mon,wed,fri] [-p project]'); process.exit(1); }
+    const freq = args.freq || 'daily';
+    if (!FREQS.has(freq)) { console.log(`Invalid frequency. Valid: ${[...FREQS].join(', ')}`); process.exit(1); }
+    const slot = args.slot || 'anytime';
+    if (!SLOTS.has(slot)) { console.log(`Invalid slot. Valid: ${[...SLOTS].join(', ')}`); process.exit(1); }
+    const days = args.days ? JSON.stringify(args.days.split(',').map(d => d.trim().toLowerCase())) : null;
+    const mins = parseInt((name.match(/~(\d+)m/) || [])[1] || (name.match(/~(\d+)h/) || [])[1] && parseInt((name.match(/~(\d+)h/) || [])[1]) * 60 || 15);
+    const now = new Date().toISOString();
+    const r = await db.execute({
+      sql: 'INSERT INTO routines (name, kind, frequency, days, time_slot, project, minutes, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)',
+      args: [name, freq === 'once' ? 'reminder' : 'habit', freq, days, slot, args.project || '', mins, now, now]
+    });
+    console.log(`Added #${Number(r.lastInsertRowid)}: ${name} (${freq}, ${slot})`);
+  },
+  async list(db) {
+    const rows = await q(db, 'SELECT id, name, kind, frequency, days, time_slot, active FROM routines WHERE active = 1 ORDER BY id');
+    if (!rows.length) return console.log('No active routines.');
+    rows.forEach(r => {
+      const daysStr = r.days ? ` ${JSON.parse(r.days).join('/')}` : '';
+      console.log(`  #${r.id} [${r.kind}] ${r.name} — ${r.frequency}${daysStr}, ${r.time_slot}`);
+    });
+  },
+  async due(db, args) {
+    const targetDate = args.date || new Date().toISOString().slice(0, 10);
+    const d = new Date(targetDate + 'T12:00:00');
+    const dayName = DAY_NAMES[d.getDay()];
+    const rows = await q(db, 'SELECT id, name, frequency, days, time_slot, minutes FROM routines WHERE active = 1');
+    const completed = new Set((await q(db, 'SELECT routine_id FROM completions WHERE completed_date = ?', [targetDate])).map(r => r.routine_id));
+    const due = rows.filter(r => isDue(r, dayName) && !completed.has(r.id));
+    // Calculate streaks
+    const streaks = {};
+    for (const r of due) {
+      const dates = (await q(db, 'SELECT completed_date FROM completions WHERE routine_id = ?', [r.id])).map(c => c.completed_date);
+      streaks[r.id] = calcStreak(dates, r.frequency, r.days);
+    }
+    const fmtDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    console.log(`=== Habits & Reminders Due (${fmtDate}) ===\n`);
+    for (const slot of ['morning', 'midday', 'anytime', 'evening']) {
+      const items = due.filter(r => (r.time_slot || 'anytime') === slot);
+      console.log(`${slot.toUpperCase()}:`);
+      if (!items.length) console.log('  (none)');
+      else items.forEach(r => {
+        const daysStr = r.days ? ` ${JSON.parse(r.days).join('/')}` : '';
+        const streak = streaks[r.id] ? `, 🔥${streaks[r.id]} streak` : '';
+        console.log(`  #${r.id} ${r.name}  (${r.frequency}${daysStr}${streak})`);
+      });
+      console.log();
+    }
+  },
+  async complete(db, args) {
+    const id = +args._[0];
+    if (!id) { console.log('Usage: habit complete <id>'); process.exit(1); }
+    const routine = (await q(db, 'SELECT id, name, frequency FROM routines WHERE id = ?', [id]))[0];
+    if (!routine) { console.log(`Routine #${id} not found.`); process.exit(1); }
+    const today = new Date().toISOString().slice(0, 10);
+    const exists = (await q(db, 'SELECT id FROM completions WHERE routine_id = ? AND completed_date = ?', [id, today]));
+    if (!exists.length) {
+      await db.execute({ sql: 'INSERT INTO completions (routine_id, completed_date, completed_at) VALUES (?,?,?)', args: [id, today, new Date().toISOString()] });
+    }
+    if (routine.frequency === 'once') {
+      await db.execute({ sql: 'UPDATE routines SET active = 0, updated_at = ? WHERE id = ?', args: [new Date().toISOString(), id] });
+      console.log(`Completed #${id}: ${routine.name} (one-time — deactivated)`);
+    } else {
+      const dates = (await q(db, 'SELECT completed_date FROM completions WHERE routine_id = ?', [id])).map(r => r.completed_date);
+      const streak = calcStreak(dates, routine.frequency, null);
+      console.log(`Completed #${id}: ${routine.name} (🔥${streak} streak)`);
+    }
+  },
+  async pause(db, args) {
+    const id = +args._[0];
+    if (!id) { console.log('Usage: habit pause <id>'); process.exit(1); }
+    await db.execute({ sql: 'UPDATE routines SET active = 0, updated_at = ? WHERE id = ?', args: [new Date().toISOString(), id] });
+    console.log(`Paused routine #${id}.`);
+  },
+  async resume(db, args) {
+    const id = +args._[0];
+    if (!id) { console.log('Usage: habit resume <id>'); process.exit(1); }
+    await db.execute({ sql: 'UPDATE routines SET active = 1, updated_at = ? WHERE id = ?', args: [new Date().toISOString(), id] });
+    console.log(`Resumed routine #${id}.`);
+  },
+  async remove(db, args) {
+    const id = +args._[0];
+    if (!id) { console.log('Usage: habit remove <id>'); process.exit(1); }
+    await db.execute({ sql: 'DELETE FROM completions WHERE routine_id = ?', args: [id] });
+    await db.execute({ sql: 'DELETE FROM routines WHERE id = ?', args: [id] });
+    console.log(`Removed routine #${id} and its completions.`);
+  },
+  async streak(db, args) {
+    const id = args._[0] ? +args._[0] : null;
+    const where = id ? 'WHERE id = ? AND active = 1' : 'WHERE active = 1';
+    const wArgs = id ? [id] : [];
+    const rows = await q(db, `SELECT id, name, frequency, days FROM routines ${where} ORDER BY id`, wArgs);
+    if (!rows.length) return console.log(id ? `Routine #${id} not found or inactive.` : 'No active routines.');
+    for (const r of rows) {
+      const dates = (await q(db, 'SELECT completed_date FROM completions WHERE routine_id = ?', [r.id])).map(c => c.completed_date);
+      const s = calcStreak(dates, r.frequency, r.days);
+      console.log(`  #${r.id} ${r.name} — ${s > 0 ? `🔥${s}` : '0'} streak`);
+    }
+  }
+};
+cmds.habit = async (db, args) => {
+  await schema(db);
+  const [sub, ...rest] = args._;
+  if (!sub || !habitCmds[sub]) {
+    console.log('Usage: habit <add|list|due|complete|pause|resume|remove|streak> [args]');
+    process.exit(1);
+  }
+  await habitCmds[sub](db, { ...args, _: rest });
+};
 // --- arg parsing ---
 const parseArgs = argv => {
   const r = { _: [] };
@@ -162,6 +316,10 @@ const parseArgs = argv => {
     else if (a === '--days') r.days = +argv[++i];
     else if (a === '--include-superseded') r.includeSuperseded = true;
     else if (a === '--db') r.db = argv[++i];
+    else if (a === '--freq') r.freq = argv[++i];
+    else if (a === '--slot') r.slot = argv[++i];
+    else if (a === '--days') r.days = argv[++i];
+    else if (a === '--date') r.date = argv[++i];
     else r._.push(a);
   }
   return r;
@@ -178,6 +336,15 @@ Commands:
   supersede <id> <text> [-t type]     Supersede old → new
   consolidate                         Weekly compression
   stats                               Memory health
+
+  habit add "<name>" [--freq daily|weekdays|weekends|weekly|once] [--slot morning|midday|evening|anytime] [--days mon,wed,fri] [-p project]
+  habit list                          Active routines
+  habit due [--date YYYY-MM-DD]       What's due today
+  habit complete <id>                 Mark done for today
+  habit pause <id>                    Deactivate
+  habit resume <id>                   Reactivate
+  habit remove <id>                   Delete permanently
+  habit streak [<id>]                 Show streaks
 Env: THINKDONE_DB, THINKDONE_TURSO_URL, THINKDONE_TURSO_TOKEN`;
 const argv = process.argv.slice(2);
 if (!argv.length) { console.log(USAGE); process.exit(0); }
