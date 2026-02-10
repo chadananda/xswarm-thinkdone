@@ -376,6 +376,7 @@
   $: doneCount = tasks.filter(t => t.checked).length;
   $: totalCount = tasks.length;
   $: firstDoneIdx = tasks.findIndex(t => t.checked);
+  $: nextUpIdx = tasks.findIndex(t => !t.checked);
 </script>
 
 {#if date}
@@ -415,6 +416,7 @@
         <div
           class="task"
           class:done={task.checked}
+          class:next-up={i === nextUpIdx && editIdx !== i}
           class:past-cutoff={firstBreak >= 0 && i >= firstBreak && !task.checked}
           class:dragging={dragIdx === i}
           class:info-open={infoIdx === i}
@@ -472,7 +474,17 @@
             on:dblclick={() => startEdit(i, task.text)}
           >
             <span class="task-text">{parsed.label}</span>
-            {#if parsed.minutes || parsed.project}
+            {#if i === nextUpIdx && !task.checked}
+              <div class="next-up-detail">
+                <span class="next-up-badge">next up</span>
+                {#if parsed.minutes}
+                  <span class="next-up-meta">{formatTime(parsed.minutes)}</span>
+                {/if}
+                {#if parsed.project}
+                  <span class="next-up-meta">{parsed.project}</span>
+                {/if}
+              </div>
+            {:else if parsed.minutes || parsed.project}
               <span class="task-tags">
                 {#if parsed.minutes}
                   <span class="time-tag">{formatTime(parsed.minutes)}</span>
@@ -593,7 +605,6 @@
     justify-content: space-between;
     margin: 0.6rem 0 0.2rem;
     padding-bottom: 0.2rem;
-    padding-right: 48px;
     border-bottom: 1px solid var(--color-rule);
   }
   .date {
@@ -783,6 +794,42 @@
     text-decoration: line-through;
     color: var(--color-done);
     text-shadow: none;
+  }
+
+  /* Next up — expanded focus item */
+  .task.next-up {
+    background: var(--color-paper-bright);
+    border-color: var(--color-accent);
+    border-left: 3px solid var(--color-accent);
+    padding: 6px 8px;
+    margin-bottom: 2px;
+  }
+  .task.next-up .task-text {
+    font-size: 1.1rem;
+    font-weight: 500;
+  }
+  .next-up-detail {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 2px;
+  }
+  .next-up-badge {
+    font-family: var(--font-ui);
+    font-size: 0.55rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: white;
+    background: var(--color-accent);
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
+  .next-up-meta {
+    font-family: var(--font-ui);
+    font-size: 0.6rem;
+    color: var(--color-ink-muted);
+    letter-spacing: 0.3px;
   }
 
   .project-tag {
