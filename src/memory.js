@@ -37,7 +37,8 @@ const schema = db => db.batch([
     frequency TEXT NOT NULL DEFAULT 'daily',
     days TEXT DEFAULT NULL, time_slot TEXT DEFAULT 'anytime',
     project TEXT DEFAULT '', minutes INTEGER DEFAULT 15,
-    active INTEGER DEFAULT 1,
+    active INTEGER DEFAULT 1, remind_before INTEGER DEFAULT 0,
+    target_date TEXT DEFAULT NULL,
     created_at TEXT NOT NULL, updated_at TEXT NOT NULL)`, args: [] },
   { sql: `CREATE TABLE IF NOT EXISTS completions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -165,16 +166,34 @@ const cmds = {
   }
 };
 // --- habit helpers ---
-const FREQS = new Set(['daily', 'weekdays', 'weekends', 'weekly', 'once']);
+const FREQS = new Set(['daily', 'weekdays', 'weekends', 'weekly', 'yearly', 'once']);
 const SLOTS = new Set(['morning', 'midday', 'evening', 'anytime']);
 const DAY_NAMES = ['sun','mon','tue','wed','thu','fri','sat'];
-const isDue = (r, dayName) => {
+const isDue = (r, dayName, targetDate) => {
   if (r.frequency === 'daily') return true;
   if (r.frequency === 'weekdays') return !['sat','sun'].includes(dayName);
   if (r.frequency === 'weekends') return ['sat','sun'].includes(dayName);
   if (r.frequency === 'weekly') return (JSON.parse(r.days || '[]')).includes(dayName);
-  if (r.frequency === 'once') return true;
+  if (r.frequency === 'yearly' && r.target_date) {
+    return targetDate.slice(5) === r.target_date.slice(5); // match MM-DD
+  }
+  if (r.frequency === 'once') {
+    if (r.target_date) return targetDate >= r.target_date;
+    return true;
+  }
   return false;
+};
+// Check if a reminder/event is within its remind_before window
+const isUpcoming = (r, targetDate) => {
+  if (!r.remind_before || r.remind_before <= 0) return false;
+  if (!r.target_date) return false;
+  // For yearly, compute this year's occurrence
+  let eventDate = r.target_date;
+  if (r.frequency === 'yearly') eventDate = targetDate.slice(0, 4) + r.target_date.slice(4);
+  const target = new Date(targetDate + 'T00:00:00');
+  const event = new Date(eventDate + 'T00:00:00');
+  const daysUntil = Math.round((event - target) / 86400000);
+  return daysUntil > 0 && daysUntil <= r.remind_before;
 };
 const calcStreak = (completionDates, frequency, days) => {
   const dateSet = new Set(completionDates);
@@ -196,53 +215,90 @@ const calcStreak = (completionDates, frequency, days) => {
 const habitCmds = {
   async add(db, args) {
     const name = args._[0];
-    if (!name) { console.log('Usage: habit add "<name>" [--freq daily] [--slot morning] [--days mon,wed,fri] [-p project]'); process.exit(1); }
+    if (!name) { console.log('Usage: habit add "<name>" [--freq daily] [--slot morning] [--days mon,wed,fri] [--date YYYY-MM-DD] [--remind-before 3] [--kind habit|reminder|event] [-p project]'); process.exit(1); }
     const freq = args.freq || 'daily';
     if (!FREQS.has(freq)) { console.log(`Invalid frequency. Valid: ${[...FREQS].join(', ')}`); process.exit(1); }
     const slot = args.slot || 'anytime';
     if (!SLOTS.has(slot)) { console.log(`Invalid slot. Valid: ${[...SLOTS].join(', ')}`); process.exit(1); }
     const days = args.days ? JSON.stringify(args.days.split(',').map(d => d.trim().toLowerCase())) : null;
     const mins = parseInt((name.match(/~(\d+)m/) || [])[1] || (name.match(/~(\d+)h/) || [])[1] && parseInt((name.match(/~(\d+)h/) || [])[1]) * 60 || 15);
+    const kind = args.kind || (freq === 'once' ? 'reminder' : freq === 'yearly' ? 'event' : 'habit');
+    const remindBefore = args.remindBefore || 0;
+    const targetDate = args.date || null;
     const now = new Date().toISOString();
     const r = await db.execute({
-      sql: 'INSERT INTO routines (name, kind, frequency, days, time_slot, project, minutes, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?)',
-      args: [name, freq === 'once' ? 'reminder' : 'habit', freq, days, slot, args.project || '', mins, now, now]
+      sql: 'INSERT INTO routines (name, kind, frequency, days, time_slot, project, minutes, remind_before, target_date, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)',
+      args: [name, kind, freq, days, slot, args.project || '', mins, remindBefore, targetDate, now, now]
     });
-    console.log(`Added #${Number(r.lastInsertRowid)}: ${name} (${freq}, ${slot})`);
+    const extra = [];
+    if (targetDate) extra.push(`date: ${targetDate}`);
+    if (remindBefore) extra.push(`remind ${remindBefore}d before`);
+    console.log(`Added #${Number(r.lastInsertRowid)} [${kind}]: ${name} (${freq}, ${slot}${extra.length ? ', ' + extra.join(', ') : ''})`);
   },
   async list(db) {
-    const rows = await q(db, 'SELECT id, name, kind, frequency, days, time_slot, active FROM routines WHERE active = 1 ORDER BY id');
+    const rows = await q(db, 'SELECT id, name, kind, frequency, days, time_slot, remind_before, target_date FROM routines WHERE active = 1 ORDER BY id');
     if (!rows.length) return console.log('No active routines.');
     rows.forEach(r => {
       const daysStr = r.days ? ` ${JSON.parse(r.days).join('/')}` : '';
-      console.log(`  #${r.id} [${r.kind}] ${r.name} — ${r.frequency}${daysStr}, ${r.time_slot}`);
+      const dateStr = r.target_date ? ` on ${r.target_date}` : '';
+      const remindStr = r.remind_before ? ` (remind ${r.remind_before}d before)` : '';
+      console.log(`  #${r.id} [${r.kind}] ${r.name} — ${r.frequency}${daysStr}${dateStr}, ${r.time_slot}${remindStr}`);
     });
   },
   async due(db, args) {
     const targetDate = args.date || new Date().toISOString().slice(0, 10);
     const d = new Date(targetDate + 'T12:00:00');
     const dayName = DAY_NAMES[d.getDay()];
-    const rows = await q(db, 'SELECT id, name, frequency, days, time_slot, minutes FROM routines WHERE active = 1');
+    const rows = await q(db, 'SELECT id, name, kind, frequency, days, time_slot, minutes, remind_before, target_date FROM routines WHERE active = 1');
     const completed = new Set((await q(db, 'SELECT routine_id FROM completions WHERE completed_date = ?', [targetDate])).map(r => r.routine_id));
-    const due = rows.filter(r => isDue(r, dayName) && !completed.has(r.id));
-    // Calculate streaks
+    const due = rows.filter(r => isDue(r, dayName, targetDate) && !completed.has(r.id));
+    const upcoming = rows.filter(r => !due.includes(r) && isUpcoming(r, targetDate));
+    // Calculate streaks for habits
     const streaks = {};
-    for (const r of due) {
+    for (const r of due.filter(r => r.kind === 'habit')) {
       const dates = (await q(db, 'SELECT completed_date FROM completions WHERE routine_id = ?', [r.id])).map(c => c.completed_date);
       streaks[r.id] = calcStreak(dates, r.frequency, r.days);
     }
     const fmtDate = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    console.log(`=== Habits & Reminders Due (${fmtDate}) ===\n`);
-    for (const slot of ['morning', 'midday', 'anytime', 'evening']) {
-      const items = due.filter(r => (r.time_slot || 'anytime') === slot);
-      console.log(`${slot.toUpperCase()}:`);
-      if (!items.length) console.log('  (none)');
-      else items.forEach(r => {
+    const habits = due.filter(r => r.kind === 'habit');
+    const reminders = due.filter(r => r.kind !== 'habit');
+    // Habits → become tasks in today.md
+    if (habits.length) {
+      console.log(`=== Habits Due (${fmtDate}) — add to today.md ===\n`);
+      for (const slot of ['morning', 'midday', 'anytime', 'evening']) {
+        const items = habits.filter(r => (r.time_slot || 'anytime') === slot);
+        if (!items.length) continue;
+        console.log(`${slot.toUpperCase()}:`);
+        items.forEach(r => {
+          const daysStr = r.days ? ` ${JSON.parse(r.days).join('/')}` : '';
+          const streak = streaks[r.id] ? `, 🔥${streaks[r.id]} streak` : '';
+          console.log(`  #${r.id} ${r.name}  (${r.frequency}${daysStr}${streak})`);
+        });
+      }
+      console.log();
+    }
+    // Reminders/events → mention conversationally, don't add as tasks
+    if (reminders.length) {
+      console.log(`=== Reminders & Events Today (${fmtDate}) — mention in meeting, not tasks ===\n`);
+      reminders.forEach(r => {
         const daysStr = r.days ? ` ${JSON.parse(r.days).join('/')}` : '';
-        const streak = streaks[r.id] ? `, 🔥${streaks[r.id]} streak` : '';
-        console.log(`  #${r.id} ${r.name}  (${r.frequency}${daysStr}${streak})`);
+        console.log(`  #${r.id} [${r.kind}] ${r.name}  (${r.frequency}${daysStr})`);
       });
       console.log();
+    }
+    // Upcoming reminders within remind_before window
+    if (upcoming.length) {
+      console.log(`=== Coming Up (advance reminders) ===\n`);
+      upcoming.forEach(r => {
+        let eventDate = r.target_date;
+        if (r.frequency === 'yearly') eventDate = targetDate.slice(0, 4) + r.target_date.slice(4);
+        const daysUntil = Math.round((new Date(eventDate + 'T00:00:00') - new Date(targetDate + 'T00:00:00')) / 86400000);
+        console.log(`  #${r.id} [${r.kind}] ${r.name}  (in ${daysUntil} day${daysUntil !== 1 ? 's' : ''}, ${eventDate})`);
+      });
+      console.log();
+    }
+    if (!habits.length && !reminders.length && !upcoming.length) {
+      console.log(`=== Nothing due (${fmtDate}) ===`);
     }
   },
   async complete(db, args) {
@@ -320,6 +376,8 @@ const parseArgs = argv => {
     else if (a === '--slot') r.slot = argv[++i];
     else if (a === '--days') r.days = argv[++i];
     else if (a === '--date') r.date = argv[++i];
+    else if (a === '--remind-before') r.remindBefore = +argv[++i];
+    else if (a === '--kind') r.kind = argv[++i];
     else r._.push(a);
   }
   return r;
@@ -337,7 +395,7 @@ Commands:
   consolidate                         Weekly compression
   stats                               Memory health
 
-  habit add "<name>" [--freq daily|weekdays|weekends|weekly|once] [--slot morning|midday|evening|anytime] [--days mon,wed,fri] [-p project]
+  habit add "<name>" [--freq daily|weekdays|weekends|weekly|yearly|once] [--slot morning|midday|evening|anytime] [--days mon,wed,fri] [--date YYYY-MM-DD] [--remind-before N] [--kind habit|reminder|event] [-p project]
   habit list                          Active routines
   habit due [--date YYYY-MM-DD]       What's due today
   habit complete <id>                 Mark done for today

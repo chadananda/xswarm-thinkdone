@@ -193,6 +193,8 @@ await db.execute(`CREATE TABLE IF NOT EXISTS routines (
   project TEXT DEFAULT '',
   minutes INTEGER DEFAULT 15,
   active INTEGER DEFAULT 1,
+  remind_before INTEGER DEFAULT 0,
+  target_date TEXT DEFAULT NULL,
   created_at TEXT NOT NULL,
   updated_at TEXT NOT NULL)`);
 await db.execute(`CREATE TABLE IF NOT EXISTS completions (
@@ -254,8 +256,8 @@ console.log(`  After resume #${h2}: ${afterResume.length} active (${resumeOk ? '
 // --- habit due (day-of-week filtering) ---
 console.log('\n=== HABIT DUE ===');
 // Helper: check if a routine is due on a given day
-function isDue(routine, dayName) {
-  const { frequency, days } = routine;
+function isDue(routine, dayName, targetDate) {
+  const { frequency, days, target_date } = routine;
   if (frequency === 'daily') return true;
   if (frequency === 'weekdays') return !['sat', 'sun'].includes(dayName);
   if (frequency === 'weekends') return ['sat', 'sun'].includes(dayName);
@@ -263,18 +265,35 @@ function isDue(routine, dayName) {
     const parsed = JSON.parse(days || '[]');
     return parsed.includes(dayName);
   }
-  if (frequency === 'once') return true; // once is always due until completed
+  if (frequency === 'yearly' && target_date) {
+    return targetDate && targetDate.slice(5) === target_date.slice(5);
+  }
+  if (frequency === 'once') {
+    if (target_date) return targetDate >= target_date;
+    return true;
+  }
   return false;
+}
+function isUpcoming(routine, targetDate) {
+  if (!routine.remind_before || routine.remind_before <= 0) return false;
+  if (!routine.target_date) return false;
+  let eventDate = routine.target_date;
+  if (routine.frequency === 'yearly') eventDate = targetDate.slice(0, 4) + routine.target_date.slice(4);
+  const target = new Date(targetDate + 'T00:00:00');
+  const event = new Date(eventDate + 'T00:00:00');
+  const daysUntil = Math.round((event - target) / 86400000);
+  return daysUntil > 0 && daysUntil <= routine.remind_before;
 }
 
 // Test on a Wednesday
-const wedDue = allActive.filter(r => isDue(r, 'wed'));
+const testDate = '2026-02-11'; // a Wednesday
+const wedDue = allActive.filter(r => isDue(r, 'wed', testDate));
 console.log(`  Due on Wednesday: ${wedDue.map(r => r.name).join(', ')}`);
 let wedOk = wedDue.length === 4; // daily, weekdays, weekly(mon/wed/fri), once
 console.log(`  Expected 4 due on Wed: ${wedOk ? 'PASS' : 'FAIL'}`);
 
 // Test on a Saturday
-const satDue = allActive.filter(r => isDue(r, 'sat'));
+const satDue = allActive.filter(r => isDue(r, 'sat', '2026-02-14'));
 console.log(`  Due on Saturday: ${satDue.map(r => r.name).join(', ')}`);
 let satOk = satDue.length === 2; // daily + once (weekdays excluded, weekly excluded)
 console.log(`  Expected 2 due on Sat: ${satOk ? 'PASS' : 'FAIL'}`);
@@ -313,7 +332,7 @@ let idempotentOk = afterIdempotent.length === 1;
 console.log(`  Idempotent complete: ${idempotentOk ? 'PASS' : 'FAIL'}`);
 
 // Due should exclude completed
-const dueAfterComplete = allActive.filter(r => isDue(r, 'wed'));
+const dueAfterComplete = allActive.filter(r => isDue(r, 'wed', testDate));
 const completedIds = new Set((await db.execute({
   sql: 'SELECT routine_id FROM completions WHERE completed_date = ?',
   args: [today]
@@ -432,6 +451,39 @@ const removedComps = (await db.execute({ sql: 'SELECT id FROM completions WHERE 
 let removeCompsOk = removedComps.length === 0;
 console.log(`  Completions cleaned up: ${removeCompsOk ? 'PASS' : 'FAIL'}`);
 
+// --- yearly frequency + advance reminders ---
+console.log('\n=== YEARLY + ADVANCE REMINDERS ===');
+// Add a yearly birthday reminder with 3-day advance notice
+const r5 = await db.execute({
+  sql: 'INSERT INTO routines (name, kind, frequency, time_slot, remind_before, target_date, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)',
+  args: ["Wife's birthday — buy gift", 'event', 'yearly', 'morning', 3, '1990-03-15', now, now]
+});
+const h5 = Number(r5.lastInsertRowid);
+
+// On the birthday itself (March 15), it should be due
+const birthdayRoutine = (await db.execute({ sql: 'SELECT * FROM routines WHERE id = ?', args: [h5] })).rows[0];
+let yearlyDueOk = isDue(birthdayRoutine, 'sun', '2026-03-15');
+console.log(`  Yearly due on birthday (Mar 15): ${yearlyDueOk ? 'PASS' : 'FAIL'}`);
+
+// Not due on a random day
+let yearlyNotDueOk = !isDue(birthdayRoutine, 'mon', '2026-04-07');
+console.log(`  Yearly not due on Apr 7: ${yearlyNotDueOk ? 'PASS' : 'FAIL'}`);
+
+// 2 days before birthday → should show as upcoming (within 3-day window)
+let upcomingOk = isUpcoming(birthdayRoutine, '2026-03-13');
+console.log(`  Upcoming 2 days before (remind_before=3): ${upcomingOk ? 'PASS' : 'FAIL'}`);
+
+// 5 days before → outside window
+let notUpcomingOk = !isUpcoming(birthdayRoutine, '2026-03-10');
+console.log(`  Not upcoming 5 days before: ${notUpcomingOk ? 'PASS' : 'FAIL'}`);
+
+// Day after → not upcoming
+let pastNotUpcomingOk = !isUpcoming(birthdayRoutine, '2026-03-16');
+console.log(`  Not upcoming day after: ${pastNotUpcomingOk ? 'PASS' : 'FAIL'}`);
+
+// Clean up
+await db.execute({ sql: 'DELETE FROM routines WHERE id = ?', args: [h5] });
+
 // --- Summary ---
 const habitTests = [
   ['habit list active only', listOk],
@@ -448,6 +500,11 @@ const habitTests = [
   ['once deactivated', onceOk],
   ['habit remove routine', removeOk],
   ['habit remove completions', removeCompsOk],
+  ['yearly due on birthday', yearlyDueOk],
+  ['yearly not due other day', yearlyNotDueOk],
+  ['upcoming within window', upcomingOk],
+  ['not upcoming outside window', notUpcomingOk],
+  ['not upcoming after event', pastNotUpcomingOk],
 ];
 const habitPass = habitTests.filter(([,ok]) => ok).length;
 const habitFail = habitTests.filter(([,ok]) => !ok);
