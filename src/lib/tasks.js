@@ -34,13 +34,24 @@ export function readTasks(workspace) {
   const lines = md.split('\n');
   let date = '';
   const tasks = [];
-  for (const line of lines) {
+  for (let li = 0; li < lines.length; li++) {
+    const line = lines[li];
     const titleMatch = line.match(/^# .+[—–-]\s*(.+)$/);
     if (titleMatch) { date = titleMatch[1].trim(); continue; }
     const checkedMatch = line.match(/^- \[x\] (.+)$/);
-    if (checkedMatch) { tasks.push({ text: checkedMatch[1], checked: true }); continue; }
-    const uncheckedMatch = line.match(/^- \[ \] (.+)$/);
-    if (uncheckedMatch) { tasks.push({ text: uncheckedMatch[1], checked: false }); continue; }
+    const uncheckedMatch = !checkedMatch ? line.match(/^- \[ \] (.+)$/) : null;
+    if (checkedMatch || uncheckedMatch) {
+      const text = (checkedMatch || uncheckedMatch)[1];
+      const checked = !!checkedMatch;
+      // Collect indented detail lines
+      const detailLines = [];
+      while (li + 1 < lines.length && lines[li + 1].match(/^  \S/)) {
+        li++;
+        detailLines.push(lines[li].slice(2));
+      }
+      tasks.push({ text, checked, details: detailLines.length ? detailLines.join('\n') : '' });
+      continue;
+    }
   }
   // If the file is from a previous day, strip done items (fresh start)
   if (date && !isToday(date)) {
@@ -60,6 +71,11 @@ function writeTasks(workspace, date, tasks) {
   const lines = [title, ''];
   for (const t of tasks) {
     lines.push(`- [${t.checked ? 'x' : ' '}] ${t.text}`);
+    if (t.details) {
+      for (const dl of t.details.split('\n')) {
+        lines.push(`  ${dl}`);
+      }
+    }
   }
   lines.push('');
   writeFileSync(today, lines.join('\n'));
@@ -100,7 +116,7 @@ export function deleteTask(workspace, taskText) {
 export function addTask(workspace, taskText) {
   const { date, tasks } = readTasks(workspace);
   // New items go to top of list (done items are at bottom)
-  tasks.unshift({ text: taskText, checked: false });
+  tasks.unshift({ text: taskText, checked: false, details: '' });
   writeTasks(
     workspace,
     date || todayStr(),

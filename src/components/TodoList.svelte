@@ -484,6 +484,9 @@
                   <span class="next-up-meta">{parsed.project}</span>
                 {/if}
               </div>
+              {#if task.details}
+                <div class="next-up-details-text">{task.details}</div>
+              {/if}
             {:else if parsed.minutes || parsed.project}
               <span class="task-tags">
                 {#if parsed.minutes}
@@ -497,7 +500,7 @@
           </span>
           <div class="info-wrap" on:mouseenter={cancelInfoDismiss} on:mouseleave={startInfoDismiss}>
             <button class="info-btn" on:click|stopPropagation={() => toggleInfo(i)} title="Task info">
-              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
                 <circle cx="8" cy="8" r="6.5"/><path d="M8 7v4"/><circle cx="8" cy="5" r="0.5" fill="currentColor" stroke="none"/>
               </svg>
             </button>
@@ -511,13 +514,16 @@
                   <div class="info-row"><span class="info-key">Estimate</span> <span class="info-val">{formatTime(parsed.minutes)}</span></div>
                 {/if}
                 <div class="info-row"><span class="info-key">Status</span> <span class="info-val">{task.checked ? 'Done' : 'To do'}</span></div>
+                {#if task.details}
+                  <div class="info-details">{task.details}</div>
+                {/if}
                 <div class="info-raw">{task.text}</div>
               </div>
             {/if}
           </div>
           <div class="menu-wrap" on:mouseenter={cancelMenuDismiss} on:mouseleave={startMenuDismiss}>
             <button class="menu-btn" on:click|stopPropagation={() => toggleMenu(i)} title="Options">
-              <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/></svg>
+              <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/></svg>
             </button>
             {#if menuIdx === i}
               <div class="menu-popup">
@@ -831,6 +837,16 @@
     color: var(--color-ink-muted);
     letter-spacing: 0.3px;
   }
+  .next-up-details-text {
+    font-family: var(--font-ui);
+    font-size: 0.75rem;
+    color: var(--color-ink-light);
+    line-height: 1.45;
+    margin-top: 4px;
+    padding: 4px 0 2px;
+    border-top: 1px dashed var(--color-ink-faint);
+    white-space: pre-wrap;
+  }
 
   .project-tag {
     display: inline-block;
@@ -874,8 +890,8 @@
     color: var(--color-ink-muted);
     background: none;
     border: none;
-    padding: 4px 3px;
-    border-radius: 3px;
+    padding: 6px 4px;
+    border-radius: 4px;
     transition: opacity 0.15s, color 0.15s;
     display: flex;
     align-items: center;
@@ -920,6 +936,16 @@
   .info-val {
     color: var(--color-ink);
   }
+  .info-details {
+    font-family: var(--font-ui);
+    font-size: 0.7rem;
+    color: var(--color-ink-light);
+    line-height: 1.4;
+    margin-top: 6px;
+    padding-top: 4px;
+    border-top: 1px dashed var(--color-ink-faint);
+    white-space: pre-wrap;
+  }
   .info-raw {
     font-family: var(--font-ui);
     font-size: 0.6rem;
@@ -942,8 +968,8 @@
     color: var(--color-ink-muted);
     background: none;
     border: none;
-    padding: 4px 6px;
-    border-radius: 3px;
+    padding: 6px 6px;
+    border-radius: 4px;
     transition: opacity 0.15s, background 0.15s;
     display: flex;
     align-items: center;
