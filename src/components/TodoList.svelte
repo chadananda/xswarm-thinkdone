@@ -1,23 +1,40 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
+  import { flip } from 'svelte/animate';
+  import { playApplause, playClick, playDrop, playPoof } from '../lib/sounds.js';
 
-  let tasks = [];
-  let date = '';
+  export let initialTasks = [];
+  export let initialDate = '';
+  export let userName = '';
+
+  let tasks = initialTasks;
+  let date = initialDate;
   let busy = false;
   let editIdx = -1;
   let editVal = '';
+  let editMins = '';
+  let editProject = '';
   let newTask = '';
+  let newMins = '';
+  let newProject = '';
+  let newCustomProject = '';
+  let showAdd = false;
   let dragIdx = -1;
-  let overIdx = -1;
   let menuIdx = -1;
   let menuTimer = null;
-  let audioCtx = null;
   let poll;
+  let deletingText = null;
+  let justAddedText = null;
+  let infoIdx = -1;
+  let undoTask = null;
+  let undoTimer = null;
+  let swipeX = 0;
+  let swipeIdx = -1;
+  let swipeDelta = 0;
 
   const WORK_HOURS = 8;
 
   function parseTask(text) {
-    // Extract time estimate: ~15m or ~1.5h at end or before project tag
     let minutes = 0;
     let clean = text;
     const timeMatch = text.match(/\s*~(\d+(?:\.\d+)?)(m|h)\s*/);
@@ -25,7 +42,6 @@
       minutes = timeMatch[2] === 'h' ? Math.round(parseFloat(timeMatch[1]) * 60) : parseInt(timeMatch[1]);
       clean = text.replace(timeMatch[0], ' ').trim();
     }
-    // Extract project tag
     const projMatch = clean.match(/^(.+?)\s+[—–]\s+(\S+)$/);
     const label = projMatch ? projMatch[1] : clean;
     const project = projMatch ? projMatch[2] : '';
@@ -41,25 +57,35 @@
     return `${mins}m`;
   }
 
-  // Calculate where the "day ends" line falls
-  function dayEndIndex(taskList) {
+  function dayBreaks(taskList) {
     let total = 0;
     const limit = WORK_HOURS * 60;
+    const breaks = {};
+    let dayNum = 1;
     for (let i = 0; i < taskList.length; i++) {
       if (taskList[i].checked) continue;
       const p = parseTask(taskList[i].text);
-      total += p.minutes || 15; // default 15m if no estimate
-      if (total > limit) return i;
+      total += p.minutes || 15;
+      while (total > limit * dayNum) {
+        breaks[i] = dayNum;
+        dayNum++;
+      }
     }
-    return -1; // all tasks fit
+    return breaks;
+  }
+
+  function dayLabel(daysFromNow) {
+    const d = new Date();
+    d.setDate(d.getDate() + daysFromNow);
+    return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
   }
 
   async function fetchTasks() {
-    if (busy) return;
+    if (busy || editIdx >= 0 || dragIdx >= 0) return;
     try {
       const r = await fetch('/api/tasks');
       const d = await r.json();
-      if (!busy) { tasks = d.tasks; date = d.date; }
+      if (!busy && editIdx < 0 && dragIdx < 0) { tasks = d.tasks; date = d.date; }
     } catch {}
   }
 
@@ -75,34 +101,94 @@
   async function toggle(text) {
     busy = true;
     menuIdx = -1;
+    const task = tasks.find(t => t.text === text);
+    const willCheck = task && !task.checked;
     const r = await api('toggle', { task: text });
-    if (r.result === 'checked') playComplete();
+    if (r.result === 'checked') playApplause();
+    else if (r.result === 'unchecked') playClick();
     await fetchTasks();
     busy = false;
+  }
+
+  function openAdd() {
+    showAdd = true;
+    newTask = '';
+    newMins = '';
+    newProject = '';
+    newCustomProject = '';
+    setTimeout(() => {
+      const input = document.querySelector('.add-popup .add-text-input');
+      if (input) input.focus();
+    }, 10);
   }
 
   async function add() {
-    const t = newTask.trim();
-    if (!t) return;
+    let label = newTask.trim();
+    if (!label) return;
+    const mins = parseInt(newMins);
+    if (mins > 0) label += ` ~${mins}m`;
+    const proj = newProject === '__new__' ? newCustomProject.trim() : newProject;
+    if (proj) label += ` — ${proj}`;
     busy = true;
-    await api('add', { task: t });
+    showAdd = false;
+    justAddedText = label;
+    await api('add', { task: label });
     newTask = '';
+    newMins = '';
+    newProject = '';
+    newCustomProject = '';
+    playDrop();
     await fetchTasks();
     busy = false;
+    // Clear animation class after it plays
+    setTimeout(() => { justAddedText = null; }, 400);
   }
 
   async function del(text) {
-    busy = true;
     menuIdx = -1;
-    await api('delete', { task: text });
-    await fetchTasks();
-    busy = false;
+    editIdx = -1;
+    deletingText = text;
+    playPoof();
+    await new Promise(r => setTimeout(r, 400));
+    // Remove from local list immediately but delay server delete for undo
+    const removed = tasks.find(t => t.text === text);
+    tasks = tasks.filter(t => t.text !== text);
+    deletingText = null;
+    if (!removed) return;
+    // Cancel any previous undo
+    if (undoTimer) { clearTimeout(undoTimer); }
+    undoTask = removed;
+    undoTimer = setTimeout(async () => {
+      // Actually delete on server
+      busy = true;
+      await api('delete', { task: text });
+      undoTask = null;
+      undoTimer = null;
+      await fetchTasks();
+      busy = false;
+    }, 3000);
   }
+
+  async function undo() {
+    if (!undoTask || !undoTimer) return;
+    clearTimeout(undoTimer);
+    const task = undoTask;
+    undoTask = null;
+    undoTimer = null;
+    // Re-add locally (will sync on next poll)
+    tasks = [task, ...tasks.filter(t => !t.checked), ...tasks.filter(t => t.checked)];
+    playDrop();
+  }
+
+  $: projects = [...new Set(tasks.map(t => parseTask(t.text).project).filter(Boolean))].sort();
 
   function startEdit(i, text) {
     menuIdx = -1;
     editIdx = i;
-    editVal = text;
+    const p = parseTask(text);
+    editMins = p.minutes ? String(p.minutes) : '';
+    editProject = p.project;
+    editVal = p.label;
     setTimeout(() => {
       const input = document.querySelector('.edit-input');
       if (input) { input.focus(); input.select(); }
@@ -110,9 +196,14 @@
   }
 
   async function saveEdit(oldText) {
-    const newText = editVal.trim();
+    let label = editVal.trim();
+    if (!label) { editIdx = -1; return; }
+    const mins = parseInt(editMins);
+    let newText = label;
+    if (mins > 0) newText += ` ~${mins}m`;
+    if (editProject) newText += ` — ${editProject}`;
     editIdx = -1;
-    if (!newText || newText === oldText) return;
+    if (newText === oldText) return;
     busy = true;
     await api('edit', { oldTask: oldText, newTask: newText });
     await fetchTasks();
@@ -122,6 +213,20 @@
   function toggleMenu(i) {
     clearTimeout(menuTimer);
     menuIdx = menuIdx === i ? -1 : i;
+    infoIdx = -1;
+  }
+
+  let infoTimer;
+  function toggleInfo(i) {
+    clearTimeout(infoTimer);
+    infoIdx = infoIdx === i ? -1 : i;
+    menuIdx = -1;
+  }
+  function startInfoDismiss() {
+    infoTimer = setTimeout(() => { infoIdx = -1; }, 2000);
+  }
+  function cancelInfoDismiss() {
+    clearTimeout(infoTimer);
   }
 
   function startMenuDismiss() {
@@ -132,119 +237,193 @@
     clearTimeout(menuTimer);
   }
 
-  function onDragStart(e, i) {
+  // Pointer-based drag reordering (replaces HTML5 drag API)
+  let dragClone = null;
+  let dragOffsetY = 0;
+
+  function onDragPointerDown(e, i) {
+    if (e.button !== 0) return;
+    if (e.target.closest('input, button, select, a, .edit-card, .info-popup, .menu-popup')) return;
+    e.preventDefault();
     menuIdx = -1;
+    infoIdx = -1;
+
+    const wrap = e.currentTarget;
+    const rect = wrap.getBoundingClientRect();
+    dragOffsetY = e.clientY - rect.top;
     dragIdx = i;
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', '');
+
+    // Create floating clone
+    dragClone = wrap.cloneNode(true);
+    Object.assign(dragClone.style, {
+      position: 'fixed',
+      left: rect.left + 'px',
+      top: rect.top + 'px',
+      width: rect.width + 'px',
+      zIndex: '1000',
+      pointerEvents: 'none',
+      opacity: '0.92',
+      boxShadow: '0 8px 24px rgba(139,69,19,0.2)',
+      transform: 'scale(1.02)',
+      borderRadius: '6px',
+      background: 'var(--color-paper-bright)',
+    });
+    document.body.appendChild(dragClone);
+
+    window.addEventListener('pointermove', onDragPointerMove);
+    window.addEventListener('pointerup', onDragPointerUp);
   }
 
-  function onDragOver(e, i) {
-    if (dragIdx < 0 || dragIdx === i) return;
+  function onDragPointerMove(e) {
+    if (dragIdx < 0 || !dragClone) return;
     e.preventDefault();
-    overIdx = i;
+    dragClone.style.top = (e.clientY - dragOffsetY) + 'px';
+
+    // Find target index by comparing cursor to item midpoints
+    const wraps = document.querySelectorAll('.task-wrap');
+    const centerY = e.clientY;
+    let targetIdx = dragIdx;
+
+    for (let j = dragIdx - 1; j >= 0; j--) {
+      const r = wraps[j].getBoundingClientRect();
+      if (centerY < r.top + r.height / 2) targetIdx = j;
+      else break;
+    }
+    if (targetIdx === dragIdx) {
+      for (let j = dragIdx + 1; j < wraps.length; j++) {
+        const r = wraps[j].getBoundingClientRect();
+        if (centerY > r.top + r.height / 2) targetIdx = j;
+        else break;
+      }
+    }
+
+    if (targetIdx !== dragIdx) {
+      const arr = [...tasks];
+      const [item] = arr.splice(dragIdx, 1);
+      arr.splice(targetIdx, 0, item);
+      tasks = arr;
+      dragIdx = targetIdx;
+    }
   }
 
-  function onDragEnd() { dragIdx = -1; overIdx = -1; }
-
-  async function onDrop(e, targetIdx) {
-    e.preventDefault();
-    if (dragIdx < 0 || dragIdx === targetIdx) return;
-    busy = true;
-    const arr = [...tasks];
-    const [item] = arr.splice(dragIdx, 1);
-    arr.splice(targetIdx, 0, item);
+  function onDragPointerUp() {
+    window.removeEventListener('pointermove', onDragPointerMove);
+    window.removeEventListener('pointerup', onDragPointerUp);
+    if (dragClone) { dragClone.remove(); dragClone = null; }
+    if (dragIdx >= 0) {
+      playDrop();
+      api('reorder', { tasks });
+    }
     dragIdx = -1;
-    overIdx = -1;
-    tasks = arr;
-    await api('reorder', { tasks: arr });
-    await fetchTasks();
-    busy = false;
   }
 
-  function playComplete() {
-    try {
-      if (!audioCtx) audioCtx = new AudioContext();
-      const now = audioCtx.currentTime;
-      [523.25, 659.25, 783.99, 1046.50].forEach((freq, i) => {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.value = freq;
-        gain.gain.setValueAtTime(0, now + i * 0.07);
-        gain.gain.linearRampToValueAtTime(0.1, now + i * 0.07 + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.07 + 0.5);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start(now + i * 0.07);
-        osc.stop(now + 1.5);
-      });
-      const len = Math.floor(audioCtx.sampleRate * 0.25);
-      const buf = audioCtx.createBuffer(1, len, audioCtx.sampleRate);
-      const d = buf.getChannelData(0);
-      for (let j = 0; j < len; j++) d[j] = Math.random() * 2 - 1;
-      const noise = audioCtx.createBufferSource();
-      noise.buffer = buf;
-      const bp = audioCtx.createBiquadFilter();
-      bp.type = 'bandpass'; bp.frequency.value = 3500; bp.Q.value = 0.7;
-      const ng = audioCtx.createGain();
-      ng.gain.setValueAtTime(0, now);
-      ng.gain.linearRampToValueAtTime(0.025, now + 0.04);
-      ng.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
-      noise.connect(bp); bp.connect(ng); ng.connect(audioCtx.destination);
-      noise.start(now); noise.stop(now + 0.3);
-    } catch {}
+  // Swipe-to-complete (mobile)
+  function onSwipeStart(e, i) {
+    if (e.touches.length !== 1) return;
+    swipeX = e.touches[0].clientX;
+    swipeIdx = i;
+    swipeDelta = 0;
+  }
+  function onSwipeMove(e) {
+    if (swipeIdx < 0) return;
+    swipeDelta = e.touches[0].clientX - swipeX;
+    if (swipeDelta < 0) swipeDelta = 0; // only swipe right
+  }
+  function onSwipeEnd() {
+    if (swipeIdx >= 0 && swipeDelta > 80) {
+      const task = tasks[swipeIdx];
+      if (task) toggle(task.text);
+    }
+    swipeIdx = -1;
+    swipeDelta = 0;
   }
 
-  // Close menu on outside click
   function onWindowClick(e) {
     if (menuIdx >= 0 && !e.target.closest('.menu-wrap')) {
       menuIdx = -1;
     }
+    if (infoIdx >= 0 && !e.target.closest('.info-wrap')) {
+      infoIdx = -1;
+    }
+    if (editIdx >= 0 && !e.target.closest('.edit-card') && !e.target.closest('.menu-item')) {
+      editIdx = -1;
+    }
+  }
+
+  function onKeydown(e) {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+    if (e.key === 'n' && !showAdd) { e.preventDefault(); openAdd(); }
   }
 
   onMount(() => {
-    fetchTasks();
+    if (!tasks.length && !date) fetchTasks();
     poll = setInterval(fetchTasks, 3000);
     window.addEventListener('click', onWindowClick);
+    window.addEventListener('keydown', onKeydown);
   });
 
   onDestroy(() => {
     clearInterval(poll);
-    if (typeof window !== 'undefined') window.removeEventListener('click', onWindowClick);
+    if (undoTimer) clearTimeout(undoTimer);
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('click', onWindowClick);
+      window.removeEventListener('keydown', onKeydown);
+    }
   });
 
-  $: cutoffIdx = dayEndIndex(tasks);
+  $: breaks = dayBreaks(tasks);
+  $: firstBreak = Object.keys(breaks).length ? Math.min(...Object.keys(breaks).map(Number)) : -1;
+  $: doneCount = tasks.filter(t => t.checked).length;
+  $: totalCount = tasks.length;
+  $: firstDoneIdx = tasks.findIndex(t => t.checked);
 </script>
 
 {#if date}
-  <div class="date">{date}</div>
+  <div class="date-row">
+    <span class="date">{date}</span>
+    {#if totalCount > 0}
+      <span class="progress">{doneCount}/{totalCount}</span>
+    {/if}
+  </div>
 {/if}
 
 {#if tasks.length === 0}
-  <p class="empty">Start a planning meeting to begin your day.</p>
+  <div class="empty">
+    <span class="empty-icon">&#128161;</span>
+    <p>Start a planning meeting to begin your day.</p>
+  </div>
 {:else}
-  <div class="task-list">
+  <div class="task-list" class:list-dragging={dragIdx >= 0}>
     {#each tasks as task, i (task.text)}
       {@const parsed = parseTask(task.text)}
-      {#if i === cutoffIdx && cutoffIdx > 0}
-        <div class="day-end-line">
-          <span class="day-end-label">~{WORK_HOURS}h day ends here</span>
-        </div>
-      {/if}
       <div
-        class="task"
-        class:done={task.checked}
-        class:dragging={dragIdx === i}
-        class:drag-over={overIdx === i}
-        class:past-cutoff={cutoffIdx >= 0 && i >= cutoffIdx && !task.checked}
-        draggable={editIdx !== i}
-        on:dragstart={(e) => onDragStart(e, i)}
-        on:dragover={(e) => onDragOver(e, i)}
-        on:dragleave={() => overIdx = -1}
-        on:dragend={onDragEnd}
-        on:drop={(e) => onDrop(e, i)}
+        class="task-wrap"
+        animate:flip={{ duration: 200 }}
+        on:pointerdown={(e) => onDragPointerDown(e, i)}
+        on:touchstart={(e) => onSwipeStart(e, i)}
+        on:touchmove={onSwipeMove}
+        on:touchend={onSwipeEnd}
       >
+        {#if task.checked && i === firstDoneIdx && firstDoneIdx > 0}
+          <div class="done-separator">
+            <span class="done-label">completed</span>
+          </div>
+        {/if}
+        {#if breaks[i] && !task.checked}
+          <div class="day-break">{dayLabel(breaks[i])}</div>
+        {/if}
+        <div
+          class="task"
+          class:done={task.checked}
+          class:past-cutoff={firstBreak >= 0 && i >= firstBreak && !task.checked}
+          class:dragging={dragIdx === i}
+          class:info-open={infoIdx === i}
+          class:menu-open={menuIdx === i}
+          class:deleting={deletingText === task.text}
+          class:just-added={justAddedText === task.text}
+          class:swiping={swipeIdx === i && swipeDelta > 10}
+          style={swipeIdx === i && swipeDelta > 10 ? `transform: translateX(${Math.min(swipeDelta, 120)}px); opacity: ${1 - swipeDelta / 200}` : ''}
+        >
         <input
           type="checkbox"
           checked={task.checked}
@@ -256,12 +435,31 @@
               class="edit-input"
               type="text"
               bind:value={editVal}
-              on:blur={() => saveEdit(task.text)}
               on:keydown={(e) => {
                 if (e.key === 'Enter') saveEdit(task.text);
                 if (e.key === 'Escape') editIdx = -1;
               }}
             />
+            <div class="edit-row">
+              <div class="time-group">
+                <div class="time-presets">
+                  {#each [5, 15, 30, 60, 120] as m}
+                    <button class="preset-btn" class:active={editMins === String(m)} on:mousedown|preventDefault={() => { editMins = String(m); }}>
+                      {m >= 60 ? `${m/60}h` : `${m}m`}
+                    </button>
+                  {/each}
+                </div>
+              </div>
+              <label class="field-label">
+                <span class="field-label-text">project</span>
+                <select class="project-select" bind:value={editProject}>
+                  <option value="">none</option>
+                  {#each projects as proj}
+                    <option value={proj}>{proj}</option>
+                  {/each}
+                </select>
+              </label>
+            </div>
             <div class="edit-actions">
               <button class="edit-card-btn save-btn" on:mousedown|preventDefault={() => saveEdit(task.text)}>Save</button>
               <button class="edit-card-btn cancel-btn" on:mousedown|preventDefault={() => { editIdx = -1; }}>Cancel</button>
@@ -273,14 +471,38 @@
             class="task-label"
             on:dblclick={() => startEdit(i, task.text)}
           >
-            {parsed.label}
-            {#if parsed.minutes}
-              <span class="time-tag">{formatTime(parsed.minutes)}</span>
-            {/if}
-            {#if parsed.project}
-              <span class="project-tag">{parsed.project}</span>
+            <span class="task-text">{parsed.label}</span>
+            {#if parsed.minutes || parsed.project}
+              <span class="task-tags">
+                {#if parsed.minutes}
+                  <span class="time-tag">{formatTime(parsed.minutes)}</span>
+                {/if}
+                {#if parsed.project}
+                  <span class="project-tag">{parsed.project}</span>
+                {/if}
+              </span>
             {/if}
           </span>
+          <div class="info-wrap" on:mouseenter={cancelInfoDismiss} on:mouseleave={startInfoDismiss}>
+            <button class="info-btn" on:click|stopPropagation={() => toggleInfo(i)} title="Task info">
+              <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                <circle cx="8" cy="8" r="6.5"/><path d="M8 7v4"/><circle cx="8" cy="5" r="0.5" fill="currentColor" stroke="none"/>
+              </svg>
+            </button>
+            {#if infoIdx === i}
+              <div class="info-popup">
+                <div class="info-title">{parsed.label}</div>
+                {#if parsed.project}
+                  <div class="info-row"><span class="info-key">Project</span> <span class="info-val">{parsed.project}</span></div>
+                {/if}
+                {#if parsed.minutes}
+                  <div class="info-row"><span class="info-key">Estimate</span> <span class="info-val">{formatTime(parsed.minutes)}</span></div>
+                {/if}
+                <div class="info-row"><span class="info-key">Status</span> <span class="info-val">{task.checked ? 'Done' : 'To do'}</span></div>
+                <div class="info-raw">{task.text}</div>
+              </div>
+            {/if}
+          </div>
           <div class="menu-wrap" on:mouseenter={cancelMenuDismiss} on:mouseleave={startMenuDismiss}>
             <button class="menu-btn" on:click|stopPropagation={() => toggleMenu(i)} title="Options">
               <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/></svg>
@@ -298,60 +520,226 @@
           </div>
         {/if}
       </div>
+      </div>
     {/each}
   </div>
 {/if}
 
-<div class="add-wrap">
-  <input
-    class="add-input"
-    type="text"
-    placeholder="Add a task…"
-    bind:value={newTask}
-    on:keydown={(e) => { if (e.key === 'Enter') add(); }}
-  />
-</div>
+{#if showAdd}
+  <div class="add-overlay" on:click|self={() => { showAdd = false; }}></div>
+  <div class="add-popup">
+    <input
+      class="add-text-input"
+      type="text"
+      placeholder="What needs to be done?"
+      bind:value={newTask}
+      on:keydown={(e) => {
+        if (e.key === 'Enter') add();
+        if (e.key === 'Escape') { showAdd = false; }
+      }}
+    />
+    <div class="add-fields">
+      <div class="time-group">
+        <div class="time-presets">
+          {#each [5, 15, 30, 60, 120] as m}
+            <button class="preset-btn" class:active={newMins === String(m)} on:click|preventDefault={() => { newMins = String(m); }}>
+              {m >= 60 ? `${m/60}h` : `${m}m`}
+            </button>
+          {/each}
+        </div>
+      </div>
+      <label class="field-label">
+        <span class="field-label-text">project</span>
+        <select class="project-select" bind:value={newProject}>
+          <option value="">none</option>
+          {#each projects as proj}
+            <option value={proj}>{proj}</option>
+          {/each}
+          <option value="__new__">+ new project</option>
+        </select>
+      </label>
+      {#if newProject === '__new__'}
+        <input
+          class="new-project-input"
+          type="text"
+          placeholder="project tag"
+          bind:value={newCustomProject}
+          on:keydown={(e) => { if (e.key === 'Enter') add(); }}
+        />
+      {/if}
+    </div>
+    <div class="add-actions">
+      <button class="add-action-btn add-save" on:click={add}>Add Task</button>
+      <button class="add-action-btn add-cancel" on:click={() => { showAdd = false; }}>Cancel</button>
+    </div>
+  </div>
+{/if}
+
+<button class="fab" on:click={openAdd} aria-label="Add task (N)">
+  <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="11" y1="4" x2="11" y2="18"/><line x1="4" y1="11" x2="18" y2="11"/></svg>
+</button>
+
+{#if undoTask}
+  <div class="undo-toast">
+    <span>Deleted &ldquo;{undoTask.text.length > 30 ? undoTask.text.slice(0, 30) + '...' : undoTask.text}&rdquo;</span>
+    <button class="undo-btn" on:click={undo}>Undo</button>
+  </div>
+{/if}
 
 <style>
+  .date-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin: 0.6rem 0 0.2rem;
+    padding-bottom: 0.2rem;
+    padding-right: 48px;
+    border-bottom: 1px solid var(--color-rule);
+  }
   .date {
     font-family: var(--font-ui);
     font-size: 0.7rem;
     color: var(--color-ink-muted);
     text-transform: uppercase;
     letter-spacing: 1.5px;
-    margin: 0.4rem 0 0.3rem;
-    text-align: right;
+    text-align: left;
+  }
+  .progress {
+    font-family: var(--font-ui);
+    font-size: 0.65rem;
+    color: var(--color-success);
+    letter-spacing: 0.5px;
+    font-weight: 500;
+  }
+  .day-break {
+    font-family: var(--font-ui);
+    font-size: 0.65rem;
+    color: var(--color-ink-faint);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 0.4rem 0 0.1rem;
+    padding-top: 0.2rem;
+    border-top: 1px dashed var(--color-ink-faint);
+  }
+  .done-separator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0.5rem 0 0.15rem;
+  }
+  .done-separator::before, .done-separator::after {
+    content: '';
+    flex: 1;
+    border-top: 1px solid var(--color-ink-faint);
+  }
+  .done-label {
+    font-family: var(--font-ui);
+    font-size: 0.6rem;
+    color: var(--color-ink-faint);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    flex-shrink: 0;
+  }
+
+  .task-list {
+    display: flex;
+    flex-direction: column;
+  }
+  .task-list.list-dragging {
+    user-select: none;
+    -webkit-user-select: none;
   }
 
   .task {
     display: flex;
     align-items: flex-start;
-    padding: 5px 6px;
+    padding: 3px 6px;
     border-radius: 5px;
     border: 1px solid transparent;
-    transition: background 0.15s, box-shadow 0.2s, border-color 0.15s, opacity 0.2s, transform 0.15s;
-    line-height: 1.5;
+    transition: background 0.15s, box-shadow 0.2s, border-color 0.15s, opacity 0.2s, transform 0.2s, max-height 0.3s ease, padding 0.3s ease, margin 0.3s ease;
+    line-height: 1.4;
     font-size: 1.05rem;
     cursor: grab;
     position: relative;
+    touch-action: none;
+    max-height: 200px;
+    overflow: visible;
+  }
+  .task.swiping {
+    transition: none;
   }
   .task:hover {
     background: var(--color-paper-bright);
     border-color: var(--color-ink-faint);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.06);
+    box-shadow: 0 2px 8px rgba(139,69,19,0.1), 0 1px 3px rgba(139,69,19,0.06);
     transform: translateY(-1px);
   }
   .task:active { cursor: grabbing; transform: translateY(0); }
-  .task.dragging { opacity: 0.25; transform: scale(0.98); }
-  .task.drag-over { border-top: 2px solid var(--color-accent); }
-  .task.past-cutoff { opacity: 0.45; }
+  .task.dragging { opacity: 0.15; background: var(--color-ink-faint); border-radius: 4px; }
+  .task.past-cutoff { opacity: 0.75; }
+  .task.info-open { z-index: 100; }
+  .task.menu-open { z-index: 100; }
+
+  /* Deletion animation — poof explosion */
+  .task.deleting {
+    animation: poofExplode 0.4s ease-out forwards;
+    pointer-events: none;
+  }
+  @keyframes poofExplode {
+    0% {
+      transform: scale(1);
+      opacity: 1;
+      max-height: 200px;
+      padding-top: 5px;
+      padding-bottom: 5px;
+      filter: blur(0);
+    }
+    30% {
+      transform: scale(1.06);
+      opacity: 0.8;
+      filter: blur(0.5px);
+    }
+    100% {
+      transform: scale(0.2) translateX(60px);
+      opacity: 0;
+      max-height: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      margin-top: 0;
+      margin-bottom: 0;
+      filter: blur(6px);
+    }
+  }
+
+  /* New item slide-in animation */
+  .task.just-added {
+    animation: slideIn 0.35s ease-out;
+  }
+  @keyframes slideIn {
+    0% {
+      opacity: 0;
+      max-height: 0;
+      padding-top: 0;
+      padding-bottom: 0;
+      transform: translateY(-10px) scale(0.95);
+    }
+    50% {
+      max-height: 200px;
+      padding-top: 5px;
+      padding-bottom: 5px;
+    }
+    100% {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+  }
 
   .task input[type="checkbox"] {
     appearance: none; -webkit-appearance: none;
     width: 16px; height: 16px;
     border: 1.5px solid var(--color-ink-muted);
     border-radius: 2px;
-    margin: 6px 6px 0 0;
+    margin: 4px 8px 0 2px;
     cursor: pointer;
     flex-shrink: 0;
     position: relative;
@@ -372,30 +760,44 @@
     cursor: inherit;
     flex: 1;
     min-width: 0;
-    padding: 2px 0;
-    text-shadow:
-      0 0 4px var(--color-paper, #f4efe6),
-      0 0 8px var(--color-paper, #f4efe6),
-      1px 0 3px var(--color-paper, #f4efe6),
-      -1px 0 3px var(--color-paper, #f4efe6);
+    padding: 1px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
   }
-  .task.done .task-label {
+  .task-text {
+    text-shadow:
+      0 0 3px rgba(255,255,255,0.85),
+      0 0 6px var(--color-paper),
+      2px 0 8px var(--color-paper),
+      -2px 0 8px var(--color-paper);
+  }
+  .task-tags {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    margin-top: -2px;
+    margin-bottom: -3px;
+  }
+  .task.done .task-text {
     text-decoration: line-through;
     color: var(--color-done);
+    text-shadow: none;
   }
 
   .project-tag {
     display: inline-block;
     font-family: var(--font-ui);
     font-size: 0.6rem;
-    color: var(--color-ink-muted);
+    color: var(--color-ink-light);
     background: var(--color-tag-bg);
+    border: 1px solid var(--color-ink-faint);
     padding: 0 5px;
     border-radius: 3px;
-    margin-left: 6px;
     vertical-align: middle;
     text-transform: lowercase;
     letter-spacing: 0.5px;
+    text-shadow: none;
   }
   .task.done .project-tag { opacity: 0.5; }
 
@@ -407,11 +809,79 @@
     background: oklch(0.85 0.06 85 / 0.2);
     padding: 0 4px;
     border-radius: 3px;
-    margin-left: 4px;
     vertical-align: middle;
     letter-spacing: 0.3px;
+    text-shadow: none;
   }
   .task.done .time-tag { opacity: 0.4; }
+
+  /* Info button */
+  .info-wrap {
+    position: relative;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .info-btn {
+    opacity: 0.35;
+    cursor: pointer;
+    color: var(--color-ink-muted);
+    background: none;
+    border: none;
+    padding: 4px 3px;
+    border-radius: 3px;
+    transition: opacity 0.15s, color 0.15s;
+    display: flex;
+    align-items: center;
+  }
+  .task:hover .info-btn { opacity: 0.6; }
+  .info-btn:hover { opacity: 1 !important; color: var(--color-accent); }
+
+  .info-popup {
+    position: absolute;
+    right: 0;
+    top: 100%;
+    background: var(--color-paper-bright);
+    border: 1px solid var(--color-ink-faint);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.08);
+    z-index: 200;
+    min-width: 180px;
+    max-width: 280px;
+    padding: 8px 10px;
+    animation: menuFade 0.12s ease-out;
+  }
+  .info-title {
+    font-family: var(--font-hand);
+    font-size: 0.95rem;
+    color: var(--color-ink);
+    margin-bottom: 6px;
+    line-height: 1.3;
+  }
+  .info-row {
+    display: flex;
+    gap: 6px;
+    font-family: var(--font-ui);
+    font-size: 0.7rem;
+    margin-bottom: 3px;
+  }
+  .info-key {
+    color: var(--color-ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+  }
+  .info-val {
+    color: var(--color-ink);
+  }
+  .info-raw {
+    font-family: var(--font-ui);
+    font-size: 0.6rem;
+    color: var(--color-ink-faint);
+    margin-top: 6px;
+    padding-top: 4px;
+    border-top: 1px dashed var(--color-ink-faint);
+    word-break: break-all;
+  }
 
   /* Hamburger menu */
   .menu-wrap {
@@ -420,7 +890,7 @@
     margin-top: 2px;
   }
   .menu-btn {
-    opacity: 0;
+    opacity: 0.35;
     cursor: pointer;
     color: var(--color-ink-muted);
     background: none;
@@ -442,7 +912,7 @@
     border: 1px solid var(--color-ink-faint);
     border-radius: 6px;
     box-shadow: 0 4px 16px rgba(0,0,0,0.12), 0 2px 6px rgba(0,0,0,0.08);
-    z-index: 100;
+    z-index: 200;
     min-width: 120px;
     padding: 4px 0;
     animation: menuFade 0.12s ease-out;
@@ -474,11 +944,11 @@
   .edit-card {
     flex: 1;
     min-width: 0;
-    background: var(--color-paper-bright);
-    border: 1px solid var(--color-accent);
-    border-radius: 5px;
-    padding: 4px 8px 6px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+    background: white;
+    border: 2px solid var(--color-accent);
+    border-radius: 6px;
+    padding: 6px 10px 8px;
+    box-shadow: 0 4px 16px rgba(139,69,19,0.12), 0 2px 6px rgba(139,69,19,0.08);
   }
   .edit-input {
     font-family: var(--font-hand);
@@ -490,6 +960,52 @@
     padding: 2px 0;
     color: var(--color-ink);
   }
+  .edit-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .field-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .field-label-text {
+    font-family: var(--font-ui);
+    font-size: 0.65rem;
+    color: var(--color-ink-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .project-select {
+    font-family: var(--font-ui);
+    font-size: 0.8rem;
+    border: 1px solid var(--color-ink-faint);
+    border-radius: 3px;
+    background: transparent;
+    padding: 2px 4px;
+    color: var(--color-ink-muted);
+    outline: none;
+    cursor: pointer;
+    max-width: 120px;
+  }
+  .project-select:focus { border-color: var(--color-accent); }
+  .time-input {
+    width: 52px;
+    font-family: var(--font-ui);
+    font-size: 0.8rem;
+    border: 1px solid var(--color-ink-faint);
+    border-radius: 3px;
+    background: transparent;
+    padding: 2px 4px;
+    color: var(--color-gold);
+    outline: none;
+    text-align: center;
+  }
+  .time-input:focus { border-color: var(--color-gold); }
+  .time-input::placeholder { color: var(--color-ink-faint); }
+
   .edit-actions {
     display: flex;
     gap: 6px;
@@ -513,58 +1029,207 @@
   .del-btn { margin-left: auto; }
   .del-btn:hover { background: var(--color-danger); color: white; border-color: var(--color-danger); }
 
-  /* Day end line */
-  .day-end-line {
+  /* Time presets */
+  .time-group {
     display: flex;
     align-items: center;
-    gap: 8px;
-    margin: 6px 0;
-    padding: 0 4px;
+    gap: 4px;
   }
-  .day-end-line::before,
-  .day-end-line::after {
-    content: '';
-    flex: 1;
-    height: 1px;
-    background: var(--color-danger);
-    opacity: 0.5;
+  .time-presets {
+    display: flex;
+    gap: 2px;
   }
-  .day-end-label {
+  .preset-btn {
     font-family: var(--font-ui);
     font-size: 0.6rem;
-    color: var(--color-danger);
-    text-transform: uppercase;
-    letter-spacing: 1px;
+    padding: 2px 6px;
+    border: 1px solid var(--color-ink-faint);
+    border-radius: 3px;
+    background: transparent;
+    color: var(--color-ink-muted);
+    cursor: pointer;
+    transition: all 0.1s;
+    line-height: 1.2;
+  }
+  .preset-btn:hover { border-color: var(--color-gold); color: var(--color-gold); }
+  .preset-btn.active { background: var(--color-gold); color: white; border-color: var(--color-gold); }
+
+  /* Undo toast */
+  .undo-toast {
+    position: fixed;
+    bottom: 84px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--color-ink);
+    color: var(--color-paper-bright);
+    font-family: var(--font-ui);
+    font-size: 0.8rem;
+    padding: 8px 16px;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 300;
+    animation: toastIn 0.2s ease-out;
+    max-width: calc(100vw - 32px);
+  }
+  @keyframes toastIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+    to { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+  .undo-btn {
+    font-family: var(--font-ui);
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 3px 10px;
+    border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--color-gold);
+    cursor: pointer;
+    transition: all 0.1s;
     white-space: nowrap;
-    opacity: 0.7;
+  }
+  .undo-btn:hover { background: rgba(255,255,255,0.1); }
+
+  /* FAB */
+  .fab {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: none;
+    background: var(--color-accent);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 3px 12px rgba(0,0,0,0.2), 0 1px 4px rgba(0,0,0,0.12);
+    transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+    z-index: 50;
+    padding: 0;
+  }
+  .fab:hover {
+    transform: scale(1.1);
+    box-shadow: 0 4px 18px rgba(0,0,0,0.25);
+    background: var(--color-gold);
+  }
+  .fab:active { transform: scale(0.95); }
+
+  @media (max-width: 540px) {
+    .task input[type="checkbox"] {
+      width: 20px; height: 20px;
+      margin: 4px 10px 0 0;
+    }
+    .task input[type="checkbox"]:checked::after {
+      font-size: 16px;
+      top: -1px; left: 2px;
+    }
+    .fab {
+      bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+      right: calc(24px + env(safe-area-inset-right, 0px));
+    }
   }
 
-  .add-wrap {
-    padding: 8px 0 2px 28px;
-    opacity: 0.4;
-    transition: opacity 0.2s;
+  /* Add popup overlay */
+  .add-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.15);
+    z-index: 200;
   }
-  .add-wrap:focus-within { opacity: 1; }
-  .add-input {
+  .add-popup {
+    position: fixed;
+    bottom: 84px;
+    right: 24px;
+    width: 320px;
+    max-width: calc(100vw - 32px);
+    background: var(--color-paper-bright);
+    border: 1px solid var(--color-ink-faint);
+    border-radius: 8px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.1);
+    padding: 12px 14px;
+    z-index: 201;
+    animation: popupSlide 0.15s ease-out;
+  }
+  @keyframes popupSlide {
+    from { opacity: 0; transform: translateY(12px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .add-text-input {
     font-family: var(--font-hand);
-    font-size: 0.95rem;
+    font-size: 1.05rem;
     border: none;
-    border-bottom: 1px dashed transparent;
+    border-bottom: 1.5px dashed var(--color-accent);
     background: transparent;
     outline: none;
     width: 100%;
-    color: var(--color-ink-muted);
-    padding: 2px 0;
-    transition: border-color 0.2s, color 0.2s;
+    padding: 4px 0;
+    color: var(--color-ink);
+    margin-bottom: 8px;
   }
-  .add-input:focus { border-bottom-color: var(--color-ink-faint); color: var(--color-ink); }
-  .add-input::placeholder { color: var(--color-ink-faint); }
+  .add-text-input::placeholder { color: var(--color-ink-faint); }
+  .add-fields {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 10px;
+  }
+  .new-project-input {
+    font-family: var(--font-ui);
+    font-size: 0.8rem;
+    border: 1px solid var(--color-ink-faint);
+    border-radius: 3px;
+    background: transparent;
+    padding: 2px 6px;
+    color: var(--color-ink);
+    outline: none;
+    width: 100px;
+  }
+  .new-project-input:focus { border-color: var(--color-accent); }
+  .add-actions {
+    display: flex;
+    gap: 6px;
+    padding-top: 8px;
+    border-top: 1px dashed var(--color-ink-faint);
+  }
+  .add-action-btn {
+    font-family: var(--font-ui);
+    font-size: 0.75rem;
+    padding: 5px 14px;
+    border: 1px solid var(--color-ink-faint);
+    border-radius: 4px;
+    background: transparent;
+    cursor: pointer;
+    color: var(--color-ink-muted);
+    transition: all 0.15s;
+  }
+  .add-save { background: var(--color-accent); color: white; border-color: var(--color-accent); }
+  .add-save:hover { background: var(--color-gold); border-color: var(--color-gold); }
+  .add-cancel:hover { background: var(--color-hover); }
 
   .empty {
+    text-align: center;
+    margin-top: 3rem;
+  }
+  .empty-icon {
+    font-size: 3rem;
+    display: block;
+    margin-bottom: 0.5rem;
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 0.6; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.1); }
+  }
+  .empty p {
     font-family: var(--font-display);
     color: var(--color-ink-muted);
     font-size: 1.3rem;
-    text-align: center;
-    margin-top: 2rem;
   }
 </style>

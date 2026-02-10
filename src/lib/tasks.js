@@ -3,12 +3,16 @@ import { readFileSync, writeFileSync, existsSync } from 'fs';
 import { join } from 'path';
 import { execFile } from 'child_process';
 
-const WORKSPACE = join(process.cwd(), '..');
-const TODAY = join(WORKSPACE, 'plans', 'meta', 'today.md');
-const MEMORY = join(process.cwd(), 'src', 'memory.js');
+function paths(workspace) {
+  return {
+    today: join(workspace, 'plans', 'meta', 'today.md'),
+    memory: join(process.cwd(), 'src', 'memory.js'),
+  };
+}
 
-function storeMemory(text) {
-  execFile('node', [MEMORY, 'store', text, '--type', 'status'], (err, stdout) => {
+function storeMemory(workspace, text) {
+  const { memory } = paths(workspace);
+  execFile('node', [memory, 'store', text, '--type', 'status'], (err, stdout) => {
     if (err) console.error('Memory store failed:', err.message);
     else if (stdout) console.log(stdout.trim());
   });
@@ -19,14 +23,14 @@ function todayStr() {
 }
 
 function isToday(dateStr) {
-  // Compare the date in the file header with today's date
   const today = todayStr();
   return dateStr === today;
 }
 
-export function readTasks() {
-  if (!existsSync(TODAY)) return { date: '', tasks: [] };
-  const md = readFileSync(TODAY, 'utf8');
+export function readTasks(workspace) {
+  const { today } = paths(workspace);
+  if (!existsSync(today)) return { date: '', tasks: [] };
+  const md = readFileSync(today, 'utf8');
   const lines = md.split('\n');
   let date = '';
   const tasks = [];
@@ -42,13 +46,14 @@ export function readTasks() {
   if (date && !isToday(date)) {
     const unchecked = tasks.filter(t => !t.checked);
     const newDate = todayStr();
-    writeTasks(newDate, unchecked);
+    writeTasks(workspace, newDate, unchecked);
     return { date: newDate, tasks: unchecked };
   }
   return { date, tasks };
 }
 
-function writeTasks(date, tasks) {
+function writeTasks(workspace, date, tasks) {
+  const { today } = paths(workspace);
   const title = date
     ? `# Today's Plan — ${date}`
     : `# Today's Plan — ${todayStr()}`;
@@ -57,11 +62,11 @@ function writeTasks(date, tasks) {
     lines.push(`- [${t.checked ? 'x' : ' '}] ${t.text}`);
   }
   lines.push('');
-  writeFileSync(TODAY, lines.join('\n'));
+  writeFileSync(today, lines.join('\n'));
 }
 
-export function toggleTask(taskText) {
-  const { date, tasks } = readTasks();
+export function toggleTask(workspace, taskText) {
+  const { date, tasks } = readTasks(workspace);
   const idx = tasks.findIndex(t => t.text === taskText);
   if (idx < 0) return false;
 
@@ -69,61 +74,52 @@ export function toggleTask(taskText) {
   const task = tasks.splice(idx, 1)[0];
 
   if (task.checked) {
-    // Done items go to top
-    tasks.unshift(task);
+    // Done items go to bottom
+    tasks.push(task);
     const d = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    storeMemory('COMPLETED [' + d + ']: ' + taskText);
-    writeTasks(date, tasks);
+    storeMemory(workspace, 'COMPLETED [' + d + ']: ' + taskText);
+    writeTasks(workspace, date, tasks);
     return 'checked';
   } else {
-    // Unchecked: place after last done item (top of undone list)
-    let insertAt = 0;
-    for (let i = 0; i < tasks.length; i++) {
-      if (tasks[i].checked) insertAt = i + 1;
-      else break;
-    }
-    tasks.splice(insertAt, 0, task);
-    writeTasks(date, tasks);
+    // Unchecked: place at top of undone list
+    tasks.unshift(task);
+    writeTasks(workspace, date, tasks);
     return 'unchecked';
   }
 }
 
-export function deleteTask(taskText) {
-  const { date, tasks } = readTasks();
+export function deleteTask(workspace, taskText) {
+  const { date, tasks } = readTasks(workspace);
   const idx = tasks.findIndex(t => t.text === taskText);
   if (idx < 0) return false;
   tasks.splice(idx, 1);
-  writeTasks(date, tasks);
+  writeTasks(workspace, date, tasks);
   return true;
 }
 
-export function addTask(taskText) {
-  const { date, tasks } = readTasks();
-  // New items go to top of undone list (after done items)
-  let insertAt = 0;
-  for (let i = 0; i < tasks.length; i++) {
-    if (tasks[i].checked) insertAt = i + 1;
-    else break;
-  }
-  tasks.splice(insertAt, 0, { text: taskText, checked: false });
+export function addTask(workspace, taskText) {
+  const { date, tasks } = readTasks(workspace);
+  // New items go to top of list (done items are at bottom)
+  tasks.unshift({ text: taskText, checked: false });
   writeTasks(
+    workspace,
     date || todayStr(),
     tasks
   );
   return true;
 }
 
-export function editTask(oldText, newText) {
-  const { date, tasks } = readTasks();
+export function editTask(workspace, oldText, newText) {
+  const { date, tasks } = readTasks(workspace);
   const idx = tasks.findIndex(t => t.text === oldText);
   if (idx < 0) return false;
   tasks[idx].text = newText;
-  writeTasks(date, tasks);
+  writeTasks(workspace, date, tasks);
   return true;
 }
 
-export function reorderTasks(orderedTasks) {
-  const { date } = readTasks();
-  writeTasks(date, orderedTasks);
+export function reorderTasks(workspace, orderedTasks) {
+  const { date } = readTasks(workspace);
+  writeTasks(workspace, date, orderedTasks);
   return true;
 }
