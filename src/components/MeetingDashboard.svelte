@@ -840,7 +840,7 @@
   }
   .column::-webkit-scrollbar { display: none; }
   .left-column {
-    width: 300px;
+    width: 220px;
     border-right: 1px solid var(--color-rule);
     flex-shrink: 0;
   }
