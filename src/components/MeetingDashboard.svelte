@@ -11,21 +11,24 @@
 
   // Engine imports
   import { getDb, ensureSchema, getTasks, seedPersonality, clearDatabase, storeUsage, getSetting, getConnection, updateAccessToken } from '../lib/db.js';
-  import { createSession, initializeSession, processUserMessage } from '../lib/conversation.js';
+  import { createSession, initializeSession, processUserMessage, transitionState, assembleS2sSystemPrompt } from '../lib/conversation.js';
   import { calculateCost } from '../lib/usage.js';
   import { generateMorningAgenda, generateOnboardingAgenda } from '../lib/agenda.js';
   import { getRoutinesForMeeting, getHabitAnalytics } from '../lib/routines-engine.js';
   import { getStreak } from '../lib/routines.js';
   import { getProjects } from '../lib/gtd-engine.js';
-  import { processExtractions, processOnboardingExtractions, persistConversation, persistOnboardingSummary, carryOverDeferred } from '../lib/extraction.js';
+  import { processExtractions, extractFromTranscript, processOnboardingExtractions, persistConversation, persistOnboardingSummary, carryOverDeferred } from '../lib/extraction.js';
   import { resolveItem, deferItem } from '../lib/agenda.js';
-  import { buildProviderChain, PROVIDER_ORDER, SESSION_TIER_MAP } from '../lib/providers.js';
+  import { buildProviderChain, PROVIDER_ORDER, SESSION_TIER_MAP, getAllProviders } from '../lib/providers.js';
+  import { ensureFreshToken } from '../lib/provider.js';
+  import { createSpeechService, resolveMode, resolveTtsProvider, canDirectConnect, SPEECH_PROVIDER_CONNECTION_MAP } from '../lib/speech-service.js';
 
   let tasks = [];
   let voiceActive = false;
   let activeTab = 'chat';
   let mounted = false;
   let loading = true;
+  let meetingStarted = false;
   let db = null;
   let session = null;
 
@@ -35,11 +38,23 @@
   let messages = [];
   let events = [];
   let habits = [];
-  let questions = [];
   let projects = [];
   let scorecard = [];
   let streaming = false;
   let providerChain = [];
+  let speechService = null;
+
+  // S2S state
+  let s2sMode = false;
+  let s2sApiKey = null;
+  let s2sIsOAuth = false;
+  let playbackCtx = null;
+  let streamPlayhead = 0;
+  let userTranscript = '';
+  let micAudioCtx = null;
+  let micProcessor = null;
+  let micStream = null;
+  let browserRecognition = null;
 
   // --- Initialize ---
   async function init() {
@@ -48,11 +63,13 @@
       await ensureSchema(db);
       await seedPersonality(db);
 
-      // Build provider chain from settings + connections
+      // Build provider chain from settings + connections (including custom providers)
       const enabledJson = await getSetting(db, 'ai_providers_enabled');
       const enabledIds = enabledJson ? JSON.parse(enabledJson) : ['thinkdone'];
+      const customJson = await getSetting(db, 'custom_providers');
+      const allProviders = getAllProviders(customJson);
       const connections = [];
-      for (const id of PROVIDER_ORDER) {
+      for (const id of Object.keys(allProviders)) {
         const conn = await getConnection(db, id);
         if (conn) connections.push(conn);
       }
@@ -75,12 +92,70 @@
 
       // Build provider chain with tier-appropriate model selection
       const tier = SESSION_TIER_MAP[session.type] || 'standard';
-      providerChain = buildProviderChain(enabledIds, connections, tier);
+      providerChain = buildProviderChain(enabledIds, connections, tier, allProviders);
 
       const today = new Date().toISOString().slice(0, 10);
       tasks = await getTasks(db, today);
       syncAgenda();
       await loadDashboardData(today);
+
+      // Initialize speech service from saved profile
+      try {
+        const profileId = await getSetting(db, 'speech_profile') || 'browser-native';
+        const mode = resolveMode(profileId);
+        console.log(`[Dashboard] speech init: profile=${profileId} mode=${mode}`);
+        let apiKey = null;
+        let isOAuth = false;
+        if (mode !== 'browser') {
+          const ttsP = resolveTtsProvider(profileId);
+          const connKey = SPEECH_PROVIDER_CONNECTION_MAP[ttsP] || ttsP;
+          const conn = await getConnection(db, connKey);
+          apiKey = conn?.access_token || null;
+          isOAuth = !!(conn?.refresh_token);
+          // Refresh expired OAuth tokens before using them
+          if (isOAuth && conn) {
+            try {
+              apiKey = await ensureFreshToken(conn);
+              if (conn._refreshed) await updateAccessToken(db, connKey, conn.access_token, conn.expires_at);
+            } catch (e) {
+              console.error('[Dashboard] token refresh failed:', e);
+            }
+          }
+          console.log(`[Dashboard] speech: ttsProvider=${ttsP} connKey=${connKey} hasApiKey=${!!apiKey} isOAuth=${isOAuth}`);
+        }
+        // S2S mode: Gemini Live with meeting system prompt
+        if (mode === 's2s' && apiKey && canDirectConnect(profileId)) {
+          console.log('[Dashboard] → S2S mode: assembling system prompt for Gemini Live');
+          const { flat } = await assembleS2sSystemPrompt(session, db);
+          speechService = createSpeechService(profileId, {
+            apiKey: isOAuth ? undefined : apiKey,
+            accessToken: isOAuth ? apiKey : undefined,
+            systemPrompt: flat,
+          });
+          s2sMode = true;
+          s2sApiKey = apiKey;
+          s2sIsOAuth = isOAuth;
+          console.log('[Dashboard] S2S mode enabled');
+        } else if (apiKey && canDirectConnect(profileId)) {
+          // Try browser-direct first (no server needed)
+          console.log('[Dashboard] → browser-direct speech path');
+          speechService = createSpeechService(profileId, {
+            apiKey: isOAuth ? undefined : apiKey,
+            accessToken: isOAuth ? apiKey : undefined,
+          });
+        } else if (mode !== 'browser') {
+          speechService = createSpeechService(profileId, {
+            WebSocket: globalThis.WebSocket,
+            wsUrl: `ws://${location.host}/ws/speech`,
+            apiKey,
+          });
+        } else {
+          speechService = createSpeechService(profileId);
+        }
+        console.log(`[Dashboard] speechService created: mode=${speechService.mode} s2s=${s2sMode} profileId=${speechService.profileId}`);
+      } catch (err) {
+        console.error('[Dashboard] Speech service init failed:', err);
+      }
 
       loading = false;
       if (typeof window !== 'undefined') window.__initDone = true;
@@ -192,10 +267,213 @@
     }
   }
 
+  // --- Start Meeting (from lobby) ---
+  async function startMeeting() {
+    meetingStarted = true;
+    if (s2sMode) initS2sConversation();
+  }
+
+  // --- S2S Conversation ---
+
+  function initS2sConversation() {
+    if (!speechService || !s2sMode) return;
+    console.log('[Dashboard] initS2sConversation: wiring S2S callbacks');
+
+    // Streaming PCM playback — zero-latency audio as chunks arrive
+    speechService.onStreamingAudio((pcmData) => {
+      streamPcmChunk(pcmData);
+    });
+
+    // Full turn complete — transcript + WAV
+    speechService.onAiAudio((wav, transcript) => {
+      handleS2sTurnComplete(transcript);
+    });
+
+    // Send opening context so Gemini greets the user
+    const openingText = buildOpeningText();
+    console.log(`[Dashboard] S2S sending opening: "${openingText.slice(0, 80)}..."`);
+    speechService.speak(openingText);
+  }
+
+  function buildOpeningText() {
+    const agendaItems = session.agenda
+      .filter(a => a.status === 'pending')
+      .slice(0, 5)
+      .map(a => a.content)
+      .join(', ');
+    const agendaPart = agendaItems ? ` Today's agenda includes: ${agendaItems}.` : '';
+    return `Start the meeting. Greet the user with a brief, warm morning greeting.${agendaPart} Then introduce the first agenda item and ask one question.`;
+  }
+
+  function streamPcmChunk(pcmData) {
+    if (!playbackCtx) {
+      playbackCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+      streamPlayhead = playbackCtx.currentTime;
+    }
+    // Convert PCM 16-bit LE to float32
+    const samples = pcmData.length / 2;
+    const float32 = new Float32Array(samples);
+    const view = new DataView(pcmData.buffer, pcmData.byteOffset, pcmData.byteLength);
+    for (let i = 0; i < samples; i++) {
+      float32[i] = view.getInt16(i * 2, true) / 32768;
+    }
+    const buffer = playbackCtx.createBuffer(1, samples, 24000);
+    buffer.copyToChannel(float32, 0);
+    const source = playbackCtx.createBufferSource();
+    source.buffer = buffer;
+    source.connect(playbackCtx.destination);
+    // Schedule on timeline for gapless playback
+    const startAt = Math.max(playbackCtx.currentTime, streamPlayhead);
+    source.start(startAt);
+    streamPlayhead = startAt + buffer.duration;
+  }
+
+  async function handleS2sTurnComplete(transcript) {
+    if (!session || !db) return;
+    console.log(`[Dashboard] S2S turn complete: user="${userTranscript.slice(0, 60)}" ai="${transcript.slice(0, 60)}"`);
+
+    // Add user message from browser STT
+    if (userTranscript.trim()) {
+      session.messages.push({ role: 'user', content: userTranscript.trim() });
+    }
+    // Add assistant transcript
+    if (transcript.trim()) {
+      session.messages.push({ role: 'assistant', content: transcript.trim() });
+    }
+
+    // Update reactive messages for ChatPanel
+    messages = session.messages.map(m => ({
+      role: m.role === 'user' ? 'user' : 'ai',
+      text: m.content,
+    }));
+
+    // Post-hoc extraction via Gemini Flash text API
+    if (transcript.trim()) {
+      try {
+        const result = await extractFromTranscript(transcript, {
+          apiKey: s2sIsOAuth ? undefined : s2sApiKey,
+          accessToken: s2sIsOAuth ? s2sApiKey : undefined,
+          agenda: session.agenda,
+          meetingType: session.type,
+        });
+
+        // Process extractions
+        if (result.extractions) {
+          await processExtractions(db, result.extractions);
+        }
+
+        // Apply agenda updates
+        if (result.agendaUpdates) {
+          for (const r of result.agendaUpdates.resolves) {
+            resolveItem(session.agenda, r.id, r.resolution);
+          }
+          for (const d of result.agendaUpdates.defers) {
+            deferItem(session.agenda, d.id);
+          }
+        }
+      } catch (err) {
+        console.error('[Dashboard] S2S extraction failed:', err);
+      }
+    }
+
+    // Advance state machine
+    if (session.state === 'OPENING') {
+      transitionState(session, 'user_message');
+    }
+    transitionState(session, 'turn_complete');
+
+    // Refresh tasks and agenda
+    const today = new Date().toISOString().slice(0, 10);
+    tasks = await getTasks(db, today);
+    syncAgenda();
+
+    // Reset user transcript for next turn
+    userTranscript = '';
+  }
+
+  function startS2sMic() {
+    console.log('[Dashboard] startS2sMic');
+    // 16kHz AudioContext for mic capture
+    micAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+      micStream = stream;
+      const source = micAudioCtx.createMediaStreamSource(stream);
+      // ScriptProcessorNode: 4096 samples per buffer at 16kHz
+      micProcessor = micAudioCtx.createScriptProcessor(4096, 1, 1);
+      micProcessor.onaudioprocess = (e) => {
+        const float32 = e.inputBuffer.getChannelData(0);
+        // Convert float32 to 16-bit PCM LE
+        const pcm = new Int16Array(float32.length);
+        for (let i = 0; i < float32.length; i++) {
+          pcm[i] = Math.max(-32768, Math.min(32767, Math.round(float32[i] * 32768)));
+        }
+        speechService.sendAudio(new Uint8Array(pcm.buffer));
+      };
+      source.connect(micProcessor);
+      micProcessor.connect(micAudioCtx.destination);
+      console.log('[Dashboard] mic capture active at 16kHz');
+    }).catch(err => {
+      console.error('[Dashboard] mic access denied:', err);
+      voiceActive = false;
+    });
+
+    // Parallel: browser SpeechRecognition for user transcript
+    startBrowserSTT();
+  }
+
+  function stopS2sMic() {
+    console.log('[Dashboard] stopS2sMic');
+    if (micProcessor) { micProcessor.disconnect(); micProcessor = null; }
+    if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+    if (micAudioCtx) { micAudioCtx.close().catch(() => {}); micAudioCtx = null; }
+    stopBrowserSTT();
+  }
+
+  function startBrowserSTT() {
+    if (typeof window === 'undefined') return;
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return;
+    browserRecognition = new SR();
+    browserRecognition.continuous = true;
+    browserRecognition.interimResults = true;
+    browserRecognition.lang = 'en-US';
+    browserRecognition.onresult = (event) => {
+      let transcript = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        transcript += event.results[i][0].transcript;
+      }
+      userTranscript = transcript;
+    };
+    browserRecognition.onend = () => {
+      if (voiceActive && browserRecognition) {
+        try { browserRecognition.start(); } catch {}
+      }
+    };
+    browserRecognition.start();
+  }
+
+  function stopBrowserSTT() {
+    if (browserRecognition) {
+      browserRecognition.abort();
+      browserRecognition = null;
+    }
+  }
+
   // --- Send Message ---
   async function handleSendMessage(event) {
     const text = event.detail?.text;
     if (!text || !session || !db || streaming) return;
+
+    // S2S mode: send text to Gemini, it speaks back
+    if (s2sMode && speechService) {
+      session.messages.push({ role: 'user', content: text });
+      messages = session.messages.map(m => ({
+        role: m.role === 'user' ? 'user' : 'ai',
+        text: m.content,
+      }));
+      speechService.speak(text);
+      return;
+    }
 
     streaming = true;
     let streamedText = '';
@@ -312,6 +590,9 @@
 
   function toggleVoice() {
     voiceActive = !voiceActive;
+    if (s2sMode) {
+      voiceActive ? startS2sMic() : stopS2sMic();
+    }
   }
 
   function handleMobileTranscript(e) {
@@ -326,6 +607,9 @@
 
   onDestroy(() => {
     closeMeeting();
+    if (s2sMode) stopS2sMic();
+    if (playbackCtx) playbackCtx.close().catch(() => {});
+    speechService?.destroy();
   });
 </script>
 
@@ -333,6 +617,20 @@
   <div class="loading-state" role="status" aria-label="Loading planning session">
     <div class="loading-spinner" aria-hidden="true"></div>
     <span>Setting up your planning session...</span>
+  </div>
+{:else if !meetingStarted}
+  <!-- Pre-meeting lobby -->
+  <div class="lobby" role="main" aria-label="Meeting lobby">
+    <div class="lobby-sidebar">
+      <AgendaPanel {agenda} animated={mounted} />
+    </div>
+    <div class="lobby-center">
+      <div class="lobby-type">{session?.type === 'onboarding' ? 'Welcome Meeting' : 'Morning Meeting'}</div>
+      <div class="lobby-hint">{agenda.filter(a => a.status === 'pending' || a.status === 'active').length} agenda items</div>
+      <button class="lobby-start-btn" on:click={startMeeting} aria-label="Start meeting">
+        Start Meeting
+      </button>
+    </div>
   </div>
 {:else}
   <MeetingBar {goals} {events} animated={mounted} />
@@ -352,7 +650,7 @@
     </div>
 
     <div class="column center-column" class:mobile-visible={activeTab === 'chat'} id="panel-chat" role="tabpanel" aria-labelledby="tab-chat">
-      <ChatPanel {messages} {voiceActive} {streaming} {pendingVoiceText} on:click={toggleVoice} on:send={handleSendMessage} />
+      <ChatPanel {messages} {voiceActive} {streaming} {pendingVoiceText} {speechService} {s2sMode} on:click={toggleVoice} on:send={handleSendMessage} />
     </div>
 
     <div class="column right-column" class:mobile-visible={activeTab === 'agenda' || activeTab === 'dashboard'}>
@@ -361,7 +659,6 @@
       </div>
       <div class:mobile-hidden={activeTab === 'agenda'} id="panel-dashboard" role="tabpanel" aria-labelledby="tab-dashboard">
         <DashboardPanels
-          {questions}
           {habits}
           {projects}
           {scorecard}
@@ -373,7 +670,7 @@
 
   <!-- Mobile voice orb -->
   <div class="mobile-voice-bar">
-    <VoiceOrb active={voiceActive} mobile on:click={toggleVoice} on:transcript={handleMobileTranscript} />
+    <VoiceOrb active={voiceActive} mobile {speechService} {s2sMode} on:click={toggleVoice} on:transcript={handleMobileTranscript} />
   </div>
 {/if}
 
@@ -399,6 +696,58 @@
     animation: spin 0.8s linear infinite;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Lobby ── */
+  .lobby {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+  .lobby-sidebar {
+    width: 280px;
+    border-right: 1px solid var(--color-rule);
+    padding: 20px;
+    overflow-y: auto;
+    background: var(--color-warm);
+    flex-shrink: 0;
+  }
+  .lobby-center {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+  .lobby-type {
+    font-family: var(--font-display);
+    font-size: 28px;
+    color: var(--color-ink);
+    font-weight: 600;
+  }
+  .lobby-hint {
+    font-family: var(--font-ui);
+    font-size: 14px;
+    color: var(--color-ink-light);
+    margin-bottom: 8px;
+  }
+  .lobby-start-btn {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-ink);
+    background: var(--color-gold);
+    border: none;
+    padding: 14px 36px;
+    border-radius: 24px;
+    cursor: pointer;
+    box-shadow: 0 2px 12px color-mix(in srgb, var(--color-gold) 40%, transparent);
+    transition: transform 0.15s, box-shadow 0.2s;
+  }
+  .lobby-start-btn:hover {
+    transform: scale(1.04);
+    box-shadow: 0 4px 20px color-mix(in srgb, var(--color-gold) 50%, transparent);
+  }
 
   /* ── Mobile Tabs ── */
   .mobile-tabs {
@@ -486,5 +835,7 @@
       border-top: 1px solid var(--color-rule);
     }
     :global(.mobile-hidden) { display: none; }
+    .lobby { flex-direction: column; }
+    .lobby-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--color-rule); max-height: 40vh; }
   }
 </style>
