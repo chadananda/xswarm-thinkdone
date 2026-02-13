@@ -55,6 +55,8 @@
   let micProcessor = null;
   let micStream = null;
   let browserRecognition = null;
+  let liveAiTranscript = '';
+  let liveUserTranscript = '';
 
   // --- Initialize ---
   async function init() {
@@ -339,8 +341,16 @@
       streamPcmChunk(pcmData);
     });
 
+    // Streaming AI transcript for live display
+    if (speechService.onStreamingTranscript) {
+      speechService.onStreamingTranscript((text) => {
+        liveAiTranscript = text;
+      });
+    }
+
     // Full turn complete — transcript + WAV
     speechService.onAiAudio((wav, transcript) => {
+      liveAiTranscript = '';
       handleS2sTurnComplete(transcript);
     });
 
@@ -450,8 +460,10 @@
     tasks = await getTasks(db, today);
     syncAgenda();
 
-    // Reset user transcript for next turn
+    // Reset transcripts for next turn
     userTranscript = '';
+    liveUserTranscript = '';
+    liveAiTranscript = '';
   }
 
   function startS2sMic() {
@@ -506,6 +518,7 @@
         transcript += event.results[i][0].transcript;
       }
       userTranscript = transcript;
+      liveUserTranscript = transcript;
     };
     browserRecognition.onend = () => {
       if (voiceActive && browserRecognition) {
@@ -721,7 +734,7 @@
     </div>
 
     <div class="column center-column" class:mobile-visible={activeTab === 'chat'} id="panel-chat" role="tabpanel" aria-labelledby="tab-chat">
-      <ChatPanel {messages} {voiceActive} {streaming} {pendingVoiceText} {speechService} {s2sMode} on:click={toggleVoice} on:send={handleSendMessage} />
+      <ChatPanel {messages} {voiceActive} {streaming} {pendingVoiceText} {speechService} {s2sMode} {liveAiTranscript} {liveUserTranscript} on:click={toggleVoice} on:send={handleSendMessage} />
     </div>
 
     <div class="column right-column" class:mobile-visible={activeTab === 'agenda' || activeTab === 'dashboard'}>
