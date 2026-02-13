@@ -130,7 +130,7 @@ export async function assembleSystemPrompt(session, db) {
   return { blocks, flat };
 }
 
-function getMeetingRules(type) {
+export function getMeetingRules(type) {
   const rules = {
     morning_meeting: `# Morning Meeting Rules
 
@@ -305,6 +305,44 @@ Same <meeting_state> format.`,
   return rules[type] || rules.check_in;
 }
 
+export function stripExtractionFormat(rules) {
+  // Remove ## Extraction Format section and everything until the next ## heading or end
+  return rules.replace(/\n## Extraction Format[\s\S]*?(?=\n## |\s*$)/, '');
+}
+
+export async function assembleS2sSystemPrompt(session, db) {
+  const blocks = [];
+  // Block 1 — SOUL + calibration (same as assembleSystemPrompt)
+  let soulText = '';
+  const personality = await db.prepare('SELECT soul, disposition FROM personality WHERE id = 1').get();
+  if (personality) {
+    soulText = personality.soul;
+    if (personality.disposition) {
+      try {
+        const disp = JSON.parse(personality.disposition);
+        soulText += '\n\n## Personality Calibration\n' + Object.entries(disp).map(([k, v]) => `- ${k}: ${v}`).join('\n');
+      } catch {}
+    }
+  }
+  if (soulText) {
+    blocks.push({ type: 'text', text: soulText, cache_control: { type: 'ephemeral' } });
+  }
+  // Block 2 — Meeting type rules WITHOUT extraction format (key difference)
+  blocks.push({ type: 'text', text: stripExtractionFormat(getMeetingRules(session.type)), cache_control: { type: 'ephemeral' } });
+  // Block 3 — Memory context
+  const context = await buildContext(db, { maxTokens: 8000 });
+  if (context.text) {
+    blocks.push({ type: 'text', text: '\n## Current Context\n' + context.text, cache_control: { type: 'ephemeral' } });
+  }
+  // Block 4 — Turn context
+  const turnContext = buildTurnContext(session);
+  if (turnContext) {
+    blocks.push({ type: 'text', text: turnContext });
+  }
+  const flat = blocks.map(b => b.text).join('\n\n---\n\n');
+  return { blocks, flat };
+}
+
 function buildTurnContext(session) {
   const parts = [];
 
@@ -342,6 +380,79 @@ function buildTurnContext(session) {
   }
 
   return parts.join('\n\n');
+}
+
+// --- AI-First Opening Turn ---
+
+export async function deliverOpeningTurn(session, db, streamCallback, providerOpts = {}) {
+  // Assemble prompt
+  const systemPrompt = await assembleSystemPrompt(session, db);
+
+  // No user messages — AI speaks first
+  const claudeMessages = session.messages.map(m => ({
+    role: m.role,
+    content: m.content,
+  }));
+
+  let fullResponse = '';
+  let usage = null;
+  let usedProvider = null;
+  try {
+    let response;
+    if (providerOpts.chain?.length) {
+      const result = await callWithFallback(providerOpts.chain, {
+        system: systemPrompt,
+        messages: claudeMessages,
+      });
+      response = result.response;
+      usedProvider = result.provider;
+    } else {
+      response = await callProvider(providerOpts.provider || 'claude', {
+        system: systemPrompt,
+        messages: claudeMessages,
+        model: providerOpts.model,
+        accessToken: providerOpts.accessToken,
+      });
+    }
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value, { stream: true });
+      const lines = chunk.split('\n');
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+          if (data === '[DONE]') continue;
+          try {
+            const parsed = JSON.parse(data);
+            if (parsed.text) {
+              fullResponse += parsed.text;
+              if (streamCallback) streamCallback(parsed.text);
+            } else if (parsed.usage) {
+              usage = parsed.usage;
+            }
+          } catch {}
+        }
+      }
+    }
+  } catch (err) {
+    fullResponse = `Good morning! I'm having trouble connecting right now, but let's get started when the connection is restored.`;
+    if (streamCallback) streamCallback(fullResponse);
+  }
+
+  // Parse meeting state
+  const { displayText, extractions, agendaUpdates, nextItem } = parseMeetingState(fullResponse);
+
+  // Store assistant message
+  session.messages.push({ role: 'assistant', content: displayText });
+
+  return { displayText, extractions, agendaUpdates, nextItem, usage, usedProvider };
 }
 
 // --- Main Loop ---

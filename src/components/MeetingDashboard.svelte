@@ -11,7 +11,7 @@
 
   // Engine imports
   import { getDb, ensureSchema, getTasks, seedPersonality, clearDatabase, storeUsage, getSetting, getConnection, updateAccessToken } from '../lib/db.js';
-  import { createSession, initializeSession, processUserMessage, transitionState, assembleS2sSystemPrompt } from '../lib/conversation.js';
+  import { createSession, initializeSession, processUserMessage, deliverOpeningTurn, transitionState, assembleS2sSystemPrompt } from '../lib/conversation.js';
   import { calculateCost } from '../lib/usage.js';
   import { generateMorningAgenda, generateOnboardingAgenda } from '../lib/agenda.js';
   import { getRoutinesForMeeting, getHabitAnalytics } from '../lib/routines-engine.js';
@@ -270,7 +270,57 @@
   // --- Start Meeting (from lobby) ---
   async function startMeeting() {
     meetingStarted = true;
-    if (s2sMode) initS2sConversation();
+    if (s2sMode) {
+      initS2sConversation();
+      return;
+    }
+    // Text mode: AI delivers opening turn
+    streaming = true;
+    let streamedText = '';
+    const result = await deliverOpeningTurn(session, db, (chunk) => {
+      streamedText += chunk;
+      messages = [{
+        role: 'ai',
+        text: streamedText.replace(/<meeting_state>[\s\S]*?<\/meeting_state>/, '').trim(),
+      }];
+    }, { chain: providerChain });
+
+    // Process extractions
+    if (result.extractions) {
+      await processExtractions(db, result.extractions);
+    }
+    if (result.agendaUpdates) {
+      for (const r of result.agendaUpdates.resolves) {
+        resolveItem(session.agenda, r.id, r.resolution);
+      }
+      for (const d of result.agendaUpdates.defers) {
+        deferItem(session.agenda, d.id);
+      }
+    }
+    if (result.usage) {
+      const cost = calculateCost(result.usage.model, result.usage.input_tokens, result.usage.output_tokens, {
+        cacheReadTokens: result.usage.cache_read_input_tokens || 0,
+        cacheWriteTokens: result.usage.cache_creation_input_tokens || 0,
+      });
+      await storeUsage(db, {
+        sessionType: session.type,
+        model: result.usage.model,
+        inputTokens: result.usage.input_tokens,
+        outputTokens: result.usage.output_tokens,
+        costUsd: cost,
+        provider: result.usedProvider?.providerId || 'thinkdone',
+        cacheReadTokens: result.usage.cache_read_input_tokens || 0,
+        cacheWriteTokens: result.usage.cache_creation_input_tokens || 0,
+      });
+    }
+
+    // Finalize messages and agenda
+    messages = session.messages.map(m => ({
+      role: m.role === 'user' ? 'user' : 'ai',
+      text: m.content,
+    }));
+    syncAgenda();
+    streaming = false;
   }
 
   // --- S2S Conversation ---
