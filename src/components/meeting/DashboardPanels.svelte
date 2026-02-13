@@ -7,10 +7,10 @@
   export let animated = false;
 </script>
 
-<!-- Habits -->
-<section class="panel" aria-labelledby="habits-heading">
-  <h3 class="section-title" id="habits-heading">Habit Streaks</h3>
-  {#if habits.length > 0}
+{#if habits.length > 0}
+  <!-- Habits -->
+  <section class="panel" aria-labelledby="habits-heading">
+    <h3 class="section-title" id="habits-heading">Habit Streaks</h3>
     <div class="habits-grid" role="list" aria-label="Active habits">
       {#each habits as h}
         <div class="habit-chip" role="listitem" aria-label="{h.name}, {h.streak} day streak">
@@ -20,17 +20,13 @@
         </div>
       {/each}
     </div>
-  {:else}
-    <div class="empty-placeholder" role="status">
-      <span class="empty-hint">No habits tracked yet</span>
-    </div>
-  {/if}
-</section>
+  </section>
+{/if}
 
-<!-- Projects -->
-<section class="panel" aria-labelledby="projects-heading">
-  <h3 class="section-title" id="projects-heading">Project Health</h3>
-  {#if projects.length > 0}
+{#if projects.length > 0}
+  <!-- Projects -->
+  <section class="panel" aria-labelledby="projects-heading">
+    <h3 class="section-title" id="projects-heading">Project Health</h3>
     <div class="project-list" role="list" aria-label="Project status">
       {#each projects as p}
         {@const healthClass = p.health.includes('needs') ? 'needs' : p.health.includes('steady') ? 'steady' : ''}
@@ -41,17 +37,13 @@
         </div>
       {/each}
     </div>
-  {:else}
-    <div class="empty-placeholder" role="status">
-      <span class="empty-hint">Projects appear as tasks are tagged</span>
-    </div>
-  {/if}
-</section>
+  </section>
+{/if}
 
-<!-- Scorecard -->
-<section class="panel" aria-labelledby="scorecard-heading">
-  <h3 class="section-title" id="scorecard-heading">Weekly Scorecard</h3>
-  {#if scorecard.length > 0}
+{#if scorecard.length > 0 && scorecard.some(s => s.pct > 0)}
+  <!-- Scorecard -->
+  <section class="panel" aria-labelledby="scorecard-heading">
+    <h3 class="section-title" id="scorecard-heading">Weekly Scorecard</h3>
     <div class="scorecard-grid" role="list" aria-label="Weekly metrics">
       {#each scorecard as item}
         <div class="scorecard-card" role="listitem">
@@ -63,27 +55,11 @@
         </div>
       {/each}
     </div>
-  {:else}
-    <div class="empty-placeholder" role="status">
-      <span class="empty-hint">Complete tasks to build your scorecard</span>
-    </div>
-  {/if}
-</section>
+  </section>
+{/if}
 
 <style>
   .panel { margin-bottom: 24px; }
-  .empty-placeholder {
-    border: 1.5px dashed var(--color-ink-muted);
-    border-radius: 6px;
-    padding: 16px 12px;
-    text-align: center;
-  }
-  .empty-hint {
-    font-family: var(--font-ui);
-    font-size: 12px;
-    color: var(--color-ink-light);
-    letter-spacing: 0.3px;
-  }
   .section-title {
     font-family: var(--font-display);
     font-size: 20px;
