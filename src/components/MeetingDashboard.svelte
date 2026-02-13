@@ -18,7 +18,7 @@
   import { getStreak } from '../lib/routines.js';
   import { getProjects } from '../lib/gtd-engine.js';
   import { processExtractions, extractFromTranscript, processOnboardingExtractions, persistConversation, persistOnboardingSummary, carryOverDeferred } from '../lib/extraction.js';
-  import { resolveItem, deferItem } from '../lib/agenda.js';
+  import { resolveItem, deferItem, createAgendaItem } from '../lib/agenda.js';
   import { buildProviderChain, PROVIDER_ORDER, SESSION_TIER_MAP, getAllProviders } from '../lib/providers.js';
   import { ensureFreshToken } from '../lib/provider.js';
   import { createSpeechService, resolveMode, resolveTtsProvider, canDirectConnect, SPEECH_PROVIDER_CONNECTION_MAP } from '../lib/speech-service.js';
@@ -296,6 +296,11 @@
       for (const d of result.agendaUpdates.defers) {
         deferItem(session.agenda, d.id);
       }
+      for (const a of (result.agendaUpdates.adds || [])) {
+        session.agenda.push(createAgendaItem(
+          a.type || 'FOLLOW-UP', a.priority || 'normal', a.content, null
+        ));
+      }
     }
     if (result.usage) {
       const cost = calculateCost(result.usage.model, result.usage.input_tokens, result.usage.output_tokens, {
@@ -419,6 +424,14 @@
           }
           for (const d of result.agendaUpdates.defers) {
             deferItem(session.agenda, d.id);
+          }
+          for (const a of (result.agendaUpdates.adds || [])) {
+            session.agenda.push(createAgendaItem(
+              a.type || 'FOLLOW-UP', a.priority || 'normal', a.content, null
+            ));
+          }
+          if (result.agendaUpdates.adds?.length && session.state === 'OPEN_FLOOR') {
+            transitionState(session, 'new_items');
           }
         }
       } catch (err) {
@@ -567,6 +580,14 @@
       }
       for (const d of result.agendaUpdates.defers) {
         deferItem(session.agenda, d.id);
+      }
+      for (const a of (result.agendaUpdates.adds || [])) {
+        session.agenda.push(createAgendaItem(
+          a.type || 'FOLLOW-UP', a.priority || 'normal', a.content, null
+        ));
+      }
+      if (result.agendaUpdates.adds?.length && session.state === 'OPEN_FLOOR') {
+        transitionState(session, 'new_items');
       }
     }
 
