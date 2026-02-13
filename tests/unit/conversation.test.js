@@ -2,6 +2,8 @@ import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   createSession, transitionState, parseMeetingState, assembleSystemPrompt,
+  getMeetingRules, stripExtractionFormat, assembleS2sSystemPrompt,
+  deliverOpeningTurn, initializeSession,
 } from '../../src/lib/conversation.js';
 import { createTestDb } from '../helpers/test-db.js';
 import { ensureSchema, storeMemory, seedPersonality } from '../../src/lib/db.js';
@@ -238,5 +240,152 @@ describe('assembleSystemPrompt', () => {
     assert.ok(memBlock, 'Should have a memory context block');
     assert.deepEqual(memBlock.cache_control, { type: 'ephemeral' }, 'Memory block should be cached');
     assert.ok(result.flat.includes('Server deployment blocked'), 'flat should include memory context');
+  });
+});
+
+describe('getMeetingRules', () => {
+  it('returns rules for morning_meeting', () => {
+    const rules = getMeetingRules('morning_meeting');
+    assert.ok(rules.includes('Morning Meeting'));
+    assert.ok(rules.includes('Extraction Format'));
+  });
+
+  it('returns rules for check_in', () => {
+    const rules = getMeetingRules('check_in');
+    assert.ok(rules.includes('Check-In'));
+  });
+
+  it('returns rules for each session type', () => {
+    for (const type of ['morning_meeting', 'check_in', 'evening_review', 'weekly_review', 'onboarding', 'strategic']) {
+      const rules = getMeetingRules(type);
+      assert.ok(typeof rules === 'string');
+      assert.ok(rules.length > 50);
+    }
+  });
+
+  it('falls back to check_in for unknown types', () => {
+    const rules = getMeetingRules('nonexistent_type');
+    assert.ok(rules.includes('Check-In'));
+  });
+});
+
+describe('stripExtractionFormat', () => {
+  it('removes Extraction Format section from morning_meeting rules', () => {
+    const rules = getMeetingRules('morning_meeting');
+    const stripped = stripExtractionFormat(rules);
+    assert.ok(!stripped.includes('Extraction Format'));
+    assert.ok(!stripped.includes('<meeting_state>'));
+    // Should keep other sections
+    assert.ok(stripped.includes('Turn Structure'));
+    assert.ok(stripped.includes('One-Question Rule'));
+    assert.ok(stripped.includes('Closing'));
+  });
+
+  it('removes Extraction Format from check_in rules', () => {
+    const rules = getMeetingRules('check_in');
+    const stripped = stripExtractionFormat(rules);
+    assert.ok(!stripped.includes('Extraction Format'));
+    assert.ok(stripped.includes('Check-In'));
+  });
+
+  it('preserves text without extraction format section', () => {
+    const text = '# Rules\n\nSome rules here.\n\n## Closing\nEnd of rules.';
+    const stripped = stripExtractionFormat(text);
+    assert.equal(stripped, text);
+  });
+
+  it('handles onboarding extraction format section', () => {
+    const rules = getMeetingRules('onboarding');
+    const stripped = stripExtractionFormat(rules);
+    assert.ok(!stripped.includes('<meeting_state>'));
+    assert.ok(!stripped.includes('After your conversational response, append'));
+    assert.ok(stripped.includes('Opening'));
+    assert.ok(stripped.includes('Closing'));
+    // Note: onboarding rules mention <profile> in Name Handling section (before Extraction Format) - that's OK
+    assert.ok(stripped.includes('<profile field="user_name">'));
+  });
+});
+
+describe('assembleS2sSystemPrompt', () => {
+  it('returns { blocks, flat } object', async () => {
+    const session = createSession('morning_meeting');
+    session.state = 'OPENING';
+    const result = await assembleS2sSystemPrompt(session, db);
+    assert.ok(result.blocks);
+    assert.ok(Array.isArray(result.blocks));
+    assert.ok(typeof result.flat === 'string');
+  });
+
+  it('does not include Extraction Format in rules block', async () => {
+    const session = createSession('morning_meeting');
+    session.state = 'OPENING';
+    const result = await assembleS2sSystemPrompt(session, db);
+    assert.ok(!result.flat.includes('Extraction Format'));
+    assert.ok(!result.flat.includes('<meeting_state>'));
+  });
+
+  it('still includes meeting rules content', async () => {
+    const session = createSession('morning_meeting');
+    session.state = 'OPENING';
+    const result = await assembleS2sSystemPrompt(session, db);
+    assert.ok(result.flat.includes('Morning Meeting'));
+    assert.ok(result.flat.includes('One-Question Rule'));
+  });
+
+  it('includes SOUL and memory context like regular prompt', async () => {
+    const session = createSession('morning_meeting');
+    session.state = 'OPENING';
+    const result = await assembleS2sSystemPrompt(session, db);
+    assert.ok(result.flat.includes('Strategic Partner'));
+  });
+});
+
+describe('deliverOpeningTurn', () => {
+  it('is exported as a function', () => {
+    assert.equal(typeof deliverOpeningTurn, 'function');
+  });
+
+  it('handles provider failure gracefully — stores fallback message', async () => {
+    const session = createSession('morning_meeting');
+    session.state = 'OPENING';
+    await initializeSession(session, db, () => []);
+
+    // No chain provided and no provider configured → will fail to connect
+    const chunks = [];
+    const result = await deliverOpeningTurn(session, db, (chunk) => chunks.push(chunk), {});
+
+    // Should store exactly one assistant message (the fallback)
+    assert.equal(session.messages.length, 1);
+    assert.equal(session.messages[0].role, 'assistant');
+    assert.ok(result.displayText.includes('trouble connecting'));
+    assert.ok(chunks.length > 0);
+  });
+
+  it('does not add a user message — AI speaks first', async () => {
+    const session = createSession('morning_meeting');
+    session.state = 'OPENING';
+    await initializeSession(session, db, () => []);
+
+    await deliverOpeningTurn(session, db, () => {}, {});
+
+    // Should only have one message (the AI response), no user message
+    assert.equal(session.messages.length, 1);
+    assert.equal(session.messages[0].role, 'assistant');
+    assert.ok(!session.messages.some(m => m.role === 'user'));
+  });
+
+  it('returns proper result shape with extractions and agendaUpdates', async () => {
+    const session = createSession('morning_meeting');
+    session.state = 'OPENING';
+    await initializeSession(session, db, () => []);
+
+    const result = await deliverOpeningTurn(session, db, () => {}, {});
+
+    assert.ok('displayText' in result);
+    assert.ok('extractions' in result);
+    assert.ok('agendaUpdates' in result);
+    assert.ok('nextItem' in result);
+    assert.ok('usage' in result);
+    assert.ok('usedProvider' in result);
   });
 });
