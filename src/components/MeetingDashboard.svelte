@@ -3,25 +3,26 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import MeetingBar from './meeting/MeetingBar.svelte';
-  import PriorityStack from './meeting/PriorityStack.svelte';
+  import MeetingTaskList from './meeting/MeetingTaskList.svelte';
   import ChatPanel from './meeting/ChatPanel.svelte';
   import AgendaPanel from './meeting/AgendaPanel.svelte';
   import DashboardPanels from './meeting/DashboardPanels.svelte';
   import VoiceOrb from './meeting/VoiceOrb.svelte';
 
   // Engine imports
-  import { getDb, ensureSchema, getTasks, seedPersonality, clearDatabase, storeUsage, getSetting, getConnection, updateAccessToken } from '../lib/db.js';
+  import { getDb, ensureSchema, getTasks, toggleTask as dbToggleTask, seedPersonality, clearDatabase, storeUsage, getSetting, getConnection, updateAccessToken } from '../lib/db.js';
   import { createSession, initializeSession, processUserMessage, deliverOpeningTurn, transitionState, assembleS2sSystemPrompt } from '../lib/conversation.js';
   import { calculateCost } from '../lib/usage.js';
-  import { generateMorningAgenda, generateOnboardingAgenda } from '../lib/agenda.js';
+  import { generateMorningAgenda, generateOnboardingAgenda, applyAgendaUpdates, createAgendaItem } from '../lib/agenda.js';
   import { getRoutinesForMeeting, getHabitAnalytics } from '../lib/routines-engine.js';
   import { getStreak } from '../lib/routines.js';
   import { getProjects } from '../lib/gtd-engine.js';
-  import { processExtractions, extractFromTranscript, processOnboardingExtractions, persistConversation, persistOnboardingSummary, carryOverDeferred } from '../lib/extraction.js';
-  import { resolveItem, deferItem, createAgendaItem } from '../lib/agenda.js';
-  import { buildProviderChain, PROVIDER_ORDER, SESSION_TIER_MAP, getAllProviders } from '../lib/providers.js';
+  import { processExtractions, extractFromTranscript, processOnboardingExtractions, persistConversation, persistOnboardingSummary, carryOverDeferred, snapshotConversation, ensureExtractions } from '../lib/extraction.js';
+  import { detectDataGaps, filterNewGaps, HEARTBEAT_INTERVALS } from '../lib/heartbeat.js';
+  import { buildProviderChain, PROVIDER_ORDER, SESSION_TIER_MAP, getAllProviders, PROVIDERS } from '../lib/providers.js';
   import { ensureFreshToken } from '../lib/provider.js';
   import { createSpeechService, resolveMode, resolveTtsProvider, canDirectConnect, SPEECH_PROVIDER_CONNECTION_MAP } from '../lib/speech-service.js';
+  import { playApplause, playClick } from '../lib/sounds.js';
 
   let tasks = [];
   let voiceActive = false;
@@ -34,7 +35,16 @@
 
   // Live data (replaces mock constants)
   let goals = [];
-  let agenda = [];
+
+  // Pre-populate agenda immediately — onboarding items need no DB
+  const TYPE_TO_PHASE = {
+    'REFLECT': 'reflect', 'DECIDE': 'decide', 'COMMIT': 'commit',
+    'INFORM': 'orient', 'RESEARCH': 'create', 'PLAN': 'decide', 'FOLLOW-UP': 'commit',
+  };
+  let agenda = generateOnboardingAgenda().map(item => ({
+    id: item.id, text: item.content, question: item.question,
+    phase: TYPE_TO_PHASE[item.type] || 'orient', status: item.status, priority: item.priority,
+  }));
   let messages = [];
   let events = [];
   let habits = [];
@@ -48,41 +58,161 @@
   let s2sMode = false;
   let s2sApiKey = null;
   let s2sIsOAuth = false;
-  let playbackCtx = null;
-  let streamPlayhead = 0;
-  let userTranscript = '';
-  let micAudioCtx = null;
-  let micProcessor = null;
-  let micStream = null;
-  let browserRecognition = null;
   let liveAiTranscript = '';
   let liveUserTranscript = '';
 
-  // --- Initialize ---
-  async function init() {
+  function notifyStatusBar() {
+    if (typeof window !== 'undefined') window.dispatchEvent(new Event('statusbar-refresh'));
+  }
+
+  function extractionOpts() {
+    // Find ANY credentials for Gemini Flash extraction fallback.
+    // Scan entire provider chain, then fall back to S2S credentials.
+    let apiKey, accessToken;
+    for (const entry of providerChain) {
+      const c = entry.connection;
+      if (!c?.access_token) continue;
+      if (c.refresh_token) { accessToken = c.access_token; }
+      else { apiKey = c.access_token; }
+      break;
+    }
+    if (!apiKey && !accessToken && s2sApiKey) {
+      if (s2sIsOAuth) accessToken = s2sApiKey;
+      else apiKey = s2sApiKey;
+    }
+    return { apiKey, accessToken, agenda: session?.agenda, meetingType: session?.type };
+  }
+
+  function toDisplayMessages(sessionMessages) {
+    return sessionMessages.map(m => ({
+      role: m.role === 'user' ? 'user' : 'ai',
+      text: m.content,
+    }));
+  }
+
+  async function trackUsage(result) {
+    if (!result.usage || !db) return;
+    const u = result.usage;
+    const cost = calculateCost(u.model, u.input_tokens, u.output_tokens, {
+      cacheReadTokens: u.cache_read_input_tokens || 0,
+      cacheWriteTokens: u.cache_creation_input_tokens || 0,
+    });
+    await storeUsage(db, {
+      sessionType: session.type,
+      model: u.model,
+      inputTokens: u.input_tokens,
+      outputTokens: u.output_tokens,
+      costUsd: cost,
+      provider: result.usedProvider?.providerId || 'thinkdone',
+      cacheReadTokens: u.cache_read_input_tokens || 0,
+      cacheWriteTokens: u.cache_creation_input_tokens || 0,
+    });
+    notifyStatusBar();
+  }
+
+  // Build a transcript of recent messages for extraction context.
+  // Includes recent history so extraction model understands the planning thread.
+  function buildExtractionTranscript(msgs, maxTurns = 6) {
+    const recent = msgs.slice(-maxTurns);
+    return recent.map(m => {
+      const role = m.role === 'user' ? 'User' : 'Assistant';
+      return `${role}: ${m.content}`;
+    }).join('\n\n');
+  }
+
+  function notifyProvider() {
+    if (typeof window === 'undefined' || !providerChain.length) return;
+    const primary = providerChain[0];
+    const catalog = PROVIDERS[primary.providerId];
+    window.dispatchEvent(new CustomEvent('provider-update', {
+      detail: {
+        id: primary.providerId,
+        name: catalog?.name || primary.providerId,
+        icon: catalog?.icon || '',
+        model: primary.model,
+      },
+    }));
+  }
+
+  // --- Session Persistence (survives HMR + page reloads) ---
+  const SESSION_KEY = 'thinkdone_active_session';
+
+  function saveSession() {
+    if (typeof sessionStorage === 'undefined' || !session) return;
     try {
-      db = await getDb();
-      await ensureSchema(db);
-      await seedPersonality(db);
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({
+        session: {
+          id: session.id,
+          type: session.type,
+          state: session.state,
+          agenda: session.agenda,
+          messages: session.messages,
+          summary: session.summary,
+          startedAt: session.startedAt,
+          endedAt: session.endedAt,
+        },
+        meetingStarted,
+      }));
+    } catch {}
+  }
 
-      // Build provider chain from settings + connections (including custom providers)
-      const enabledJson = await getSetting(db, 'ai_providers_enabled');
-      const enabledIds = enabledJson ? JSON.parse(enabledJson) : ['thinkdone'];
-      const customJson = await getSetting(db, 'custom_providers');
-      const allProviders = getAllProviders(customJson);
-      const connections = [];
-      for (const id of Object.keys(allProviders)) {
-        const conn = await getConnection(db, id);
-        if (conn) connections.push(conn);
+  function restoreSession() {
+    if (typeof sessionStorage === 'undefined') return null;
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (!data?.session?.id) return null;
+      return data;
+    } catch { return null; }
+  }
+
+  function clearSavedSession() {
+    if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(SESSION_KEY);
+  }
+
+  async function handleTaskToggle(task) {
+    const result = await dbToggleTask(db, task.id);
+    if (result === 'checked') playApplause();
+    else if (result === 'unchecked') playClick();
+    tasks = await getTasks(db, new Date().toISOString().slice(0, 10));
+    notifyStatusBar();
+  }
+
+  // --- Initialize ---
+  async function initDb() {
+    db = await getDb();
+    await ensureSchema(db);
+    await seedPersonality(db);
+    if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('reset')) {
+      await clearDatabase(db);
+      clearSavedSession();
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }
+
+  async function initProviders() {
+    const enabledJson = await getSetting(db, 'ai_providers_enabled');
+    const enabledIds = enabledJson ? JSON.parse(enabledJson) : ['thinkdone'];
+    const customJson = await getSetting(db, 'custom_providers');
+    const allProviders = getAllProviders(customJson);
+    const connections = [];
+    for (const id of Object.keys(allProviders)) {
+      const conn = await getConnection(db, id);
+      if (conn) {
+        connections.push(conn);
+        if (!enabledIds.includes(id)) enabledIds.push(id);
       }
+    }
+    return { enabledIds, connections, allProviders };
+  }
 
-      // ?reset clears all data for a fresh start
-      if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('reset')) {
-        await clearDatabase(db);
-        window.history.replaceState({}, '', window.location.pathname);
-      }
-
-      // First-time detection: onboarding if no prior conversations
+  async function initSession(enabledIds, connections, allProviders) {
+    const saved = restoreSession();
+    if (saved?.session) {
+      session = saved.session;
+      meetingStarted = saved.meetingStarted || false;
+    } else {
       const { cnt } = await db.prepare('SELECT COUNT(*) as cnt FROM conversations').get();
       if (cnt === 0) {
         session = createSession('onboarding');
@@ -91,75 +221,84 @@
         session = createSession('morning_meeting');
         await initializeSession(session, db, generateMorningAgenda);
       }
+    }
+    const tier = SESSION_TIER_MAP[session.type] || 'standard';
+    providerChain = buildProviderChain(enabledIds, connections, tier, allProviders);
+    console.log(`[Dashboard] init: session=${session.type} tier=${tier} providers=${providerChain.map(p => p.providerId + ':' + p.model).join(', ')}`);
+    notifyProvider();
+    const today = new Date().toISOString().slice(0, 10);
+    tasks = await getTasks(db, today);
+    syncAgenda();
+    if (session.messages.length) {
+      messages = toDisplayMessages(session.messages);
+    }
+    await loadDashboardData(today);
+  }
 
-      // Build provider chain with tier-appropriate model selection
-      const tier = SESSION_TIER_MAP[session.type] || 'standard';
-      providerChain = buildProviderChain(enabledIds, connections, tier, allProviders);
-
-      const today = new Date().toISOString().slice(0, 10);
-      tasks = await getTasks(db, today);
-      syncAgenda();
-      await loadDashboardData(today);
-
-      // Initialize speech service from saved profile
-      try {
-        const profileId = await getSetting(db, 'speech_profile') || 'browser-native';
-        const mode = resolveMode(profileId);
-        console.log(`[Dashboard] speech init: profile=${profileId} mode=${mode}`);
-        let apiKey = null;
-        let isOAuth = false;
-        if (mode !== 'browser') {
-          const ttsP = resolveTtsProvider(profileId);
-          const connKey = SPEECH_PROVIDER_CONNECTION_MAP[ttsP] || ttsP;
-          const conn = await getConnection(db, connKey);
-          apiKey = conn?.access_token || null;
-          isOAuth = !!(conn?.refresh_token);
-          // Refresh expired OAuth tokens before using them
-          if (isOAuth && conn) {
-            try {
-              apiKey = await ensureFreshToken(conn);
-              if (conn._refreshed) await updateAccessToken(db, connKey, conn.access_token, conn.expires_at);
-            } catch (e) {
-              console.error('[Dashboard] token refresh failed:', e);
-            }
+  async function initSpeechService() {
+    try {
+      const profileId = await getSetting(db, 'speech_profile') || 'browser-native';
+      const mode = resolveMode(profileId);
+      console.log(`[Dashboard] speech init: profile=${profileId} mode=${mode}`);
+      let apiKey = null;
+      let isOAuth = false;
+      if (mode !== 'browser') {
+        const ttsP = resolveTtsProvider(profileId);
+        const connKey = SPEECH_PROVIDER_CONNECTION_MAP[ttsP] || ttsP;
+        const conn = await getConnection(db, connKey);
+        apiKey = conn?.access_token || null;
+        isOAuth = !!(conn?.refresh_token);
+        if (isOAuth && conn) {
+          try {
+            apiKey = await ensureFreshToken(conn);
+            if (conn._refreshed) await updateAccessToken(db, connKey, conn.access_token, conn.expires_at);
+          } catch (e) {
+            console.error('[Dashboard] token refresh failed:', e);
           }
-          console.log(`[Dashboard] speech: ttsProvider=${ttsP} connKey=${connKey} hasApiKey=${!!apiKey} isOAuth=${isOAuth}`);
         }
-        // S2S mode: Gemini Live with meeting system prompt
-        if (mode === 's2s' && apiKey && canDirectConnect(profileId)) {
-          console.log('[Dashboard] → S2S mode: assembling system prompt for Gemini Live');
-          const { flat } = await assembleS2sSystemPrompt(session, db);
-          speechService = createSpeechService(profileId, {
-            apiKey: isOAuth ? undefined : apiKey,
-            accessToken: isOAuth ? apiKey : undefined,
-            systemPrompt: flat,
-          });
-          s2sMode = true;
-          s2sApiKey = apiKey;
-          s2sIsOAuth = isOAuth;
-          console.log('[Dashboard] S2S mode enabled');
-        } else if (apiKey && canDirectConnect(profileId)) {
-          // Try browser-direct first (no server needed)
-          console.log('[Dashboard] → browser-direct speech path');
-          speechService = createSpeechService(profileId, {
-            apiKey: isOAuth ? undefined : apiKey,
-            accessToken: isOAuth ? apiKey : undefined,
-          });
-        } else if (mode !== 'browser') {
-          speechService = createSpeechService(profileId, {
-            WebSocket: globalThis.WebSocket,
-            wsUrl: `ws://${location.host}/ws/speech`,
-            apiKey,
-          });
-        } else {
-          speechService = createSpeechService(profileId);
-        }
-        console.log(`[Dashboard] speechService created: mode=${speechService.mode} s2s=${s2sMode} profileId=${speechService.profileId}`);
-      } catch (err) {
-        console.error('[Dashboard] Speech service init failed:', err);
+        console.log(`[Dashboard] speech: ttsProvider=${ttsP} connKey=${connKey} hasApiKey=${!!apiKey} isOAuth=${isOAuth}`);
       }
+      if (mode === 's2s' && apiKey && canDirectConnect(profileId)) {
+        console.log('[Dashboard] → S2S mode: assembling system prompt for Gemini Live');
+        const { flat } = await assembleS2sSystemPrompt(session, db);
+        speechService = createSpeechService(profileId, {
+          apiKey: isOAuth ? undefined : apiKey,
+          accessToken: isOAuth ? apiKey : undefined,
+          systemPrompt: flat,
+        });
+        s2sMode = true;
+        s2sApiKey = apiKey;
+        s2sIsOAuth = isOAuth;
+        console.log('[Dashboard] S2S mode enabled');
+      } else if (apiKey && canDirectConnect(profileId)) {
+        console.log('[Dashboard] → browser-direct speech path');
+        speechService = createSpeechService(profileId, {
+          apiKey: isOAuth ? undefined : apiKey,
+          accessToken: isOAuth ? apiKey : undefined,
+        });
+      } else if (mode !== 'browser') {
+        speechService = createSpeechService(profileId, {
+          WebSocket: globalThis.WebSocket,
+          wsUrl: `ws://${location.host}/ws/speech`,
+          apiKey,
+        });
+      } else {
+        speechService = createSpeechService(profileId);
+      }
+      console.log(`[Dashboard] speechService created: mode=${speechService.mode} s2s=${s2sMode} profileId=${speechService.profileId}`);
+    } catch (err) {
+      console.error('[Dashboard] Speech service init failed:', err);
+    }
+  }
 
+  async function init() {
+    try {
+      await initDb();
+      const { enabledIds, connections, allProviders } = await initProviders();
+      await initSession(enabledIds, connections, allProviders);
+      await initSpeechService();
       loading = false;
+      startHeartbeat();
       if (typeof window !== 'undefined') window.__initDone = true;
     } catch (err) {
       console.error('MeetingDashboard init failed:', err);
@@ -177,19 +316,11 @@
       status: item.status === 'resolved' ? 'done' : item.status,
       priority: item.priority,
     }));
+    saveSession();
   }
 
   function typeToPhase(type) {
-    const map = {
-      'REFLECT': 'reflect',
-      'DECIDE': 'decide',
-      'COMMIT': 'commit',
-      'INFORM': 'orient',
-      'RESEARCH': 'create',
-      'PLAN': 'decide',
-      'FOLLOW-UP': 'commit',
-    };
-    return map[type] || 'orient';
+    return TYPE_TO_PHASE[type] || 'orient';
   }
 
   async function loadDashboardData(today) {
@@ -271,93 +402,110 @@
 
   // --- Start Meeting (from lobby) ---
   async function startMeeting() {
+    console.log('[Dashboard] startMeeting: s2sMode=%s providers=%d', s2sMode, providerChain.length);
     meetingStarted = true;
+    saveSession();
     if (s2sMode) {
-      initS2sConversation();
-      return;
+      try {
+        await initS2sConversation();
+        return;
+      } catch (err) {
+        // S2S failed — fall back to text mode gracefully
+        console.error('[Dashboard] S2S failed, falling back to text mode:', err.message);
+        messages = [{ role: 'ai', text: `Voice connection failed — switching to text mode. (${err.message})` }];
+        s2sMode = false;
+        speechService?.stopVoice();
+        speechService?.destroy();
+        speechService = null;
+        // Continue to text mode below
+      }
     }
     // Text mode: AI delivers opening turn
     streaming = true;
+    messages = []; // Clear ghost messages, typing indicator shows instead
     let streamedText = '';
-    const result = await deliverOpeningTurn(session, db, (chunk) => {
-      streamedText += chunk;
-      messages = [{
-        role: 'ai',
-        text: streamedText.replace(/<meeting_state>[\s\S]*?<\/meeting_state>/, '').trim(),
-      }];
-    }, { chain: providerChain });
+    try {
+      console.log('[Dashboard] calling deliverOpeningTurn...');
+      const result = await deliverOpeningTurn(session, db, (chunk) => {
+        streamedText += chunk;
+        const display = streamedText.replace(/<meeting_state>[\s\S]*?<\/meeting_state>/, '').trim();
+        if (display) {
+          messages = [{ role: 'ai', text: display }];
+        }
+      }, { chain: providerChain });
+      console.log('[Dashboard] deliverOpeningTurn complete, displayText=%d chars', result.displayText?.length || 0);
 
-    // Process extractions
-    if (result.extractions) {
-      await processExtractions(db, result.extractions);
-    }
-    if (result.agendaUpdates) {
-      for (const r of result.agendaUpdates.resolves) {
-        resolveItem(session.agenda, r.id, r.resolution);
+      // Ensure extractions — inline XML or fallback
+      const ensuredOpen = await ensureExtractions(result, extractionOpts());
+      if (ensuredOpen.extractions) {
+        await processExtractions(db, ensuredOpen.extractions);
       }
-      for (const d of result.agendaUpdates.defers) {
-        deferItem(session.agenda, d.id);
-      }
-      for (const a of (result.agendaUpdates.adds || [])) {
-        session.agenda.push(createAgendaItem(
-          a.type || 'FOLLOW-UP', a.priority || 'normal', a.content, null
-        ));
-      }
-    }
-    if (result.usage) {
-      const cost = calculateCost(result.usage.model, result.usage.input_tokens, result.usage.output_tokens, {
-        cacheReadTokens: result.usage.cache_read_input_tokens || 0,
-        cacheWriteTokens: result.usage.cache_creation_input_tokens || 0,
-      });
-      await storeUsage(db, {
-        sessionType: session.type,
-        model: result.usage.model,
-        inputTokens: result.usage.input_tokens,
-        outputTokens: result.usage.output_tokens,
-        costUsd: cost,
-        provider: result.usedProvider?.providerId || 'thinkdone',
-        cacheReadTokens: result.usage.cache_read_input_tokens || 0,
-        cacheWriteTokens: result.usage.cache_creation_input_tokens || 0,
-      });
-    }
+      applyAgendaUpdates(session.agenda, ensuredOpen.agendaUpdates);
+      await trackUsage(result);
 
-    // Finalize messages and agenda
-    messages = session.messages.map(m => ({
-      role: m.role === 'user' ? 'user' : 'ai',
-      text: m.content,
-    }));
-    syncAgenda();
-    streaming = false;
+      // Refresh tasks (extractions may have added new ones)
+      const today = new Date().toISOString().slice(0, 10);
+      tasks = await getTasks(db, today);
+
+      // Finalize messages and agenda — filter out empty content
+      messages = toDisplayMessages(session.messages.filter(m => m.content?.trim()));
+      syncAgenda();
+    } catch (err) {
+      console.error('[Dashboard] startMeeting error:', err);
+      messages = [{ role: 'ai', text: `Failed to start meeting: ${err.message}. Check the browser console for details.` }];
+    } finally {
+      streaming = false;
+      notifyStatusBar();
+    }
   }
 
   // --- S2S Conversation ---
 
-  function initS2sConversation() {
+  async function initS2sConversation() {
     if (!speechService || !s2sMode) return;
     console.log('[Dashboard] initS2sConversation: wiring S2S callbacks');
 
-    // Streaming PCM playback — zero-latency audio as chunks arrive
-    speechService.onStreamingAudio((pcmData) => {
-      streamPcmChunk(pcmData);
+    // Wire user transcript events (voice STT → messages)
+    speechService.onUserTranscript((text, isFinal) => {
+      if (!isFinal) { liveUserTranscript = text; return; }
+      // Final: clear composing, add to messages, extract
+      liveUserTranscript = '';
+      if (text.trim() && session && db) {
+        session.messages.push({ role: 'user', content: text.trim() });
+        messages = toDisplayMessages(session.messages);
+        saveSession();
+        runS2sExtraction();
+      }
     });
 
-    // Streaming AI transcript for live display
+    // Wire AI transcript stream
     if (speechService.onStreamingTranscript) {
-      speechService.onStreamingTranscript((text) => {
-        liveAiTranscript = text;
-      });
+      speechService.onStreamingTranscript((text) => { liveAiTranscript += text; });
     }
 
-    // Full turn complete — transcript + WAV
+    // Wire AI turn complete (unsolicited — user spoke, Gemini responded)
     speechService.onAiAudio((wav, transcript) => {
       liveAiTranscript = '';
       handleS2sTurnComplete(transcript);
     });
 
-    // Send opening context so Gemini greets the user
+    // Start voice: mic + playback + browser STT (all managed by speech service)
+    await speechService.startVoice();
+    voiceActive = true;
+
+    // Send opening greeting
+    messages = [{ role: 'ai', text: 'Connecting...' }];
     const openingText = buildOpeningText();
     console.log(`[Dashboard] S2S sending opening: "${openingText.slice(0, 80)}..."`);
-    speechService.speak(openingText);
+    const result = await speechService.speak(openingText);
+
+    // speak() resolved — push opening transcript (onAiAudio doesn't fire for speak() calls)
+    const transcript = result?.transcript?.trim();
+    if (transcript) {
+      session.messages.push({ role: 'assistant', content: transcript });
+    }
+    messages = session.messages.length ? toDisplayMessages(session.messages) : [];
+    saveSession();
   }
 
   function buildOpeningText() {
@@ -370,275 +518,157 @@
     return `Start the meeting. Greet the user with a brief, warm morning greeting.${agendaPart} Then introduce the first agenda item and ask one question.`;
   }
 
-  function streamPcmChunk(pcmData) {
-    if (!playbackCtx) {
-      playbackCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
-      streamPlayhead = playbackCtx.currentTime;
+  // Shared S2S extraction — called by both voice turns and typed messages
+  async function runS2sExtraction() {
+    if (!session || !db || !session.messages.length) return;
+    try {
+      const conversationTranscript = buildExtractionTranscript(session.messages);
+      console.log(`[Dashboard] S2S extraction: ${conversationTranscript.length} chars of context`);
+      console.log(`[Dashboard] S2S extraction transcript:\n${conversationTranscript.slice(0, 400)}`);
+      const result = await extractFromTranscript(conversationTranscript, extractionOpts());
+
+      // Process extractions
+      if (result.extractions) {
+        const taskCount = result.extractions.tasks?.length || 0;
+        const decCount = result.extractions.decisions?.length || 0;
+        console.log(`[Dashboard] S2S extraction result: ${taskCount} tasks, ${decCount} decisions`);
+        if (taskCount) console.log(`[Dashboard] S2S tasks:`, result.extractions.tasks.map(t => t.text));
+        const created = await processExtractions(db, result.extractions);
+        if (created.tasks.length) console.log(`[Dashboard] S2S created task IDs:`, created.tasks);
+      }
+
+      // Apply agenda updates
+      applyAgendaUpdates(session.agenda, result.agendaUpdates);
+      if (result.agendaUpdates?.adds?.length && session.state === 'OPEN_FLOOR') {
+        transitionState(session, 'new_items');
+      }
+
+      // Refresh tasks after extraction
+      const today = new Date().toISOString().slice(0, 10);
+      tasks = await getTasks(db, today);
+      syncAgenda();
+      notifyStatusBar();
+    } catch (err) {
+      console.error('[Dashboard] S2S extraction failed:', err);
     }
-    // Convert PCM 16-bit LE to float32
-    const samples = pcmData.length / 2;
-    const float32 = new Float32Array(samples);
-    const view = new DataView(pcmData.buffer, pcmData.byteOffset, pcmData.byteLength);
-    for (let i = 0; i < samples; i++) {
-      float32[i] = view.getInt16(i * 2, true) / 32768;
-    }
-    const buffer = playbackCtx.createBuffer(1, samples, 24000);
-    buffer.copyToChannel(float32, 0);
-    const source = playbackCtx.createBufferSource();
-    source.buffer = buffer;
-    source.connect(playbackCtx.destination);
-    // Schedule on timeline for gapless playback
-    const startAt = Math.max(playbackCtx.currentTime, streamPlayhead);
-    source.start(startAt);
-    streamPlayhead = startAt + buffer.duration;
   }
 
   async function handleS2sTurnComplete(transcript) {
     if (!session || !db) return;
-    console.log(`[Dashboard] S2S turn complete: user="${userTranscript.slice(0, 60)}" ai="${transcript.slice(0, 60)}"`);
+    console.log(`[Dashboard] S2S turn complete: ai="${(transcript || '').slice(0, 60)}"`);
 
-    // Add user message from browser STT
-    if (userTranscript.trim()) {
-      session.messages.push({ role: 'user', content: userTranscript.trim() });
-    }
-    // Add assistant transcript
-    if (transcript.trim()) {
+    if (transcript?.trim()) {
       session.messages.push({ role: 'assistant', content: transcript.trim() });
+      messages = toDisplayMessages(session.messages);
+      saveSession();
+      await runS2sExtraction();
     }
 
-    // Update reactive messages for ChatPanel
-    messages = session.messages.map(m => ({
-      role: m.role === 'user' ? 'user' : 'ai',
-      text: m.content,
-    }));
-
-    // Post-hoc extraction via Gemini Flash text API
-    if (transcript.trim()) {
-      try {
-        const result = await extractFromTranscript(transcript, {
-          apiKey: s2sIsOAuth ? undefined : s2sApiKey,
-          accessToken: s2sIsOAuth ? s2sApiKey : undefined,
-          agenda: session.agenda,
-          meetingType: session.type,
-        });
-
-        // Process extractions
-        if (result.extractions) {
-          await processExtractions(db, result.extractions);
-        }
-
-        // Apply agenda updates
-        if (result.agendaUpdates) {
-          for (const r of result.agendaUpdates.resolves) {
-            resolveItem(session.agenda, r.id, r.resolution);
-          }
-          for (const d of result.agendaUpdates.defers) {
-            deferItem(session.agenda, d.id);
-          }
-          for (const a of (result.agendaUpdates.adds || [])) {
-            session.agenda.push(createAgendaItem(
-              a.type || 'FOLLOW-UP', a.priority || 'normal', a.content, null
-            ));
-          }
-          if (result.agendaUpdates.adds?.length && session.state === 'OPEN_FLOOR') {
-            transitionState(session, 'new_items');
-          }
-        }
-      } catch (err) {
-        console.error('[Dashboard] S2S extraction failed:', err);
-      }
-    }
-
-    // Advance state machine
-    if (session.state === 'OPENING') {
-      transitionState(session, 'user_message');
-    }
+    if (session.state === 'OPENING') transitionState(session, 'user_message');
     transitionState(session, 'turn_complete');
-
-    // Refresh tasks and agenda
-    const today = new Date().toISOString().slice(0, 10);
-    tasks = await getTasks(db, today);
-    syncAgenda();
-
-    // Reset transcripts for next turn
-    userTranscript = '';
-    liveUserTranscript = '';
     liveAiTranscript = '';
-  }
-
-  function startS2sMic() {
-    console.log('[Dashboard] startS2sMic');
-    // 16kHz AudioContext for mic capture
-    micAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-      micStream = stream;
-      const source = micAudioCtx.createMediaStreamSource(stream);
-      // ScriptProcessorNode: 4096 samples per buffer at 16kHz
-      micProcessor = micAudioCtx.createScriptProcessor(4096, 1, 1);
-      micProcessor.onaudioprocess = (e) => {
-        const float32 = e.inputBuffer.getChannelData(0);
-        // Convert float32 to 16-bit PCM LE
-        const pcm = new Int16Array(float32.length);
-        for (let i = 0; i < float32.length; i++) {
-          pcm[i] = Math.max(-32768, Math.min(32767, Math.round(float32[i] * 32768)));
-        }
-        speechService.sendAudio(new Uint8Array(pcm.buffer));
-      };
-      source.connect(micProcessor);
-      micProcessor.connect(micAudioCtx.destination);
-      console.log('[Dashboard] mic capture active at 16kHz');
-    }).catch(err => {
-      console.error('[Dashboard] mic access denied:', err);
-      voiceActive = false;
-    });
-
-    // Parallel: browser SpeechRecognition for user transcript
-    startBrowserSTT();
-  }
-
-  function stopS2sMic() {
-    console.log('[Dashboard] stopS2sMic');
-    if (micProcessor) { micProcessor.disconnect(); micProcessor = null; }
-    if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
-    if (micAudioCtx) { micAudioCtx.close().catch(() => {}); micAudioCtx = null; }
-    stopBrowserSTT();
-  }
-
-  function startBrowserSTT() {
-    if (typeof window === 'undefined') return;
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SR) return;
-    browserRecognition = new SR();
-    browserRecognition.continuous = true;
-    browserRecognition.interimResults = true;
-    browserRecognition.lang = 'en-US';
-    browserRecognition.onresult = (event) => {
-      let transcript = '';
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        transcript += event.results[i][0].transcript;
-      }
-      userTranscript = transcript;
-      liveUserTranscript = transcript;
-    };
-    browserRecognition.onend = () => {
-      if (voiceActive && browserRecognition) {
-        try { browserRecognition.start(); } catch {}
-      }
-    };
-    browserRecognition.start();
-  }
-
-  function stopBrowserSTT() {
-    if (browserRecognition) {
-      browserRecognition.abort();
-      browserRecognition = null;
-    }
   }
 
   // --- Send Message ---
   async function handleSendMessage(event) {
     const text = event.detail?.text;
-    if (!text || !session || !db || streaming) return;
+    if (!text) return;
+    if (!session || !db) {
+      console.error('[Dashboard] handleSendMessage: session or db not ready');
+      messages = [...messages, { role: 'ai', text: 'Still initializing — please wait a moment and try again.' }];
+      return;
+    }
+    if (streaming) {
+      console.warn('[Dashboard] handleSendMessage: already streaming, ignoring');
+      return;
+    }
 
     // S2S mode: send text to Gemini, it speaks back
     if (s2sMode && speechService) {
       session.messages.push({ role: 'user', content: text });
-      messages = session.messages.map(m => ({
-        role: m.role === 'user' ? 'user' : 'ai',
-        text: m.content,
-      }));
-      speechService.speak(text);
+      messages = toDisplayMessages(session.messages);
+      // Run extraction immediately on user message (don't wait for AI)
+      runS2sExtraction();
+      // Also capture AI transcript when speak completes
+      speechService.speak(text).then(result => {
+        if (result?.transcript?.trim()) {
+          session.messages.push({ role: 'assistant', content: result.transcript.trim() });
+          messages = toDisplayMessages(session.messages);
+          saveSession();
+        }
+      }).catch(err => console.error('[Dashboard] S2S speak error:', err));
       return;
     }
 
+    // Show user message immediately
+    messages = [...messages, { role: 'user', text }];
     streaming = true;
     let streamedText = '';
 
-    const result = await processUserMessage(session, text, db, (chunk) => {
-      streamedText += chunk;
-      // Update messages reactively during stream
-      const current = session.messages.map(m => ({
-        role: m.role === 'user' ? 'user' : 'ai',
-        text: m.content,
-      }));
-      // Replace last assistant message with streaming version (strip meeting_state)
-      if (current.length && current[current.length - 1].role === 'ai') {
-        current[current.length - 1].text = streamedText.replace(/<meeting_state>[\s\S]*?<\/meeting_state>/, '').trim();
-      }
-      messages = current;
-    }, {
-      chain: providerChain,
-    });
+    try {
+      console.log(`[Dashboard] sending message: "${text.slice(0, 60)}..." chain=${providerChain.length} providers`);
+      const result = await processUserMessage(session, text, db, (chunk) => {
+        streamedText += chunk;
+        const current = toDisplayMessages(session.messages);
+        const display = streamedText.replace(/<meeting_state>[\s\S]*?<\/meeting_state>/, '').trim();
+        if (display) current.push({ role: 'ai', text: display });
+        messages = current;
+      }, {
+        chain: providerChain,
+      });
 
-    // Persist refreshed token if needed
-    const usedConn = result.usedProvider?.connection;
-    if (usedConn?._refreshed) {
-      await updateAccessToken(db, usedConn.provider, usedConn.access_token, usedConn.expires_at);
-      usedConn._refreshed = false;
-    }
+      // Persist refreshed token if needed
+      const usedConn = result.usedProvider?.connection;
+      if (usedConn?._refreshed) {
+        await updateAccessToken(db, usedConn.provider, usedConn.access_token, usedConn.expires_at);
+        usedConn._refreshed = false;
+      }
 
-    // Process extractions from Claude's response
-    if (result.extractions) {
-      if (session.type === 'onboarding') {
-        await processOnboardingExtractions(db, result.extractions);
-      } else {
-        await processExtractions(db, result.extractions);
-      }
-    }
+      // Ensure extractions — inline XML or fallback post-hoc extraction
+      // Include recent conversation so extraction model has planning context
+      const opts = extractionOpts();
+      opts.transcript = buildExtractionTranscript(session.messages);
+      const ensured = await ensureExtractions(result, opts);
 
-    // Apply agenda updates
-    if (result.agendaUpdates) {
-      for (const r of result.agendaUpdates.resolves) {
-        resolveItem(session.agenda, r.id, r.resolution);
+      if (ensured.extractions) {
+        const taskCount = ensured.extractions.tasks?.length || 0;
+        if (taskCount) console.log(`[Dashboard] Processing ${taskCount} extracted tasks:`, ensured.extractions.tasks.map(t => t.text));
+        if (session.type === 'onboarding') {
+          await processOnboardingExtractions(db, ensured.extractions);
+        } else {
+          const created = await processExtractions(db, ensured.extractions);
+          if (created.tasks.length) console.log(`[Dashboard] Created task IDs:`, created.tasks);
+        }
       }
-      for (const d of result.agendaUpdates.defers) {
-        deferItem(session.agenda, d.id);
-      }
-      for (const a of (result.agendaUpdates.adds || [])) {
-        session.agenda.push(createAgendaItem(
-          a.type || 'FOLLOW-UP', a.priority || 'normal', a.content, null
-        ));
-      }
-      if (result.agendaUpdates.adds?.length && session.state === 'OPEN_FLOOR') {
+
+      // Apply agenda updates
+      applyAgendaUpdates(session.agenda, ensured.agendaUpdates);
+      if (ensured.agendaUpdates?.adds?.length && session.state === 'OPEN_FLOOR') {
         transitionState(session, 'new_items');
       }
+
+      await trackUsage(result);
+
+      // Refresh tasks (extractions may have added new ones)
+      const today = new Date().toISOString().slice(0, 10);
+      tasks = await getTasks(db, today);
+
+      // Sync messages and agenda
+      messages = toDisplayMessages(session.messages);
+      syncAgenda(); // also calls saveSession()
+
+      // Auto-transition from onboarding to first morning meeting
+      if (session.type === 'onboarding' && session.state === 'OPEN_FLOOR') {
+        await transitionToFirstMeeting();
+      }
+    } catch (err) {
+      console.error('[Dashboard] handleSendMessage error:', err);
+      // Show error as AI message so user knows what happened
+      messages = [...messages, { role: 'ai', text: `Something went wrong: ${err.message}. Check the browser console for details.` }];
+    } finally {
+      streaming = false;
+      notifyStatusBar();
     }
-
-    // Store API usage
-    if (result.usage) {
-      const cost = calculateCost(result.usage.model, result.usage.input_tokens, result.usage.output_tokens, {
-        cacheReadTokens: result.usage.cache_read_input_tokens || 0,
-        cacheWriteTokens: result.usage.cache_creation_input_tokens || 0,
-      });
-      await storeUsage(db, {
-        sessionType: session.type,
-        model: result.usage.model,
-        inputTokens: result.usage.input_tokens,
-        outputTokens: result.usage.output_tokens,
-        costUsd: cost,
-        provider: result.usedProvider?.providerId || 'thinkdone',
-        cacheReadTokens: result.usage.cache_read_input_tokens || 0,
-        cacheWriteTokens: result.usage.cache_creation_input_tokens || 0,
-      });
-    }
-
-    // Refresh tasks (extractions may have added new ones)
-    const today = new Date().toISOString().slice(0, 10);
-    tasks = await getTasks(db, today);
-
-    // Sync messages and agenda
-    messages = session.messages.map(m => ({
-      role: m.role === 'user' ? 'user' : 'ai',
-      text: m.content,
-    }));
-    syncAgenda();
-
-    // Auto-transition from onboarding to first morning meeting
-    if (session.type === 'onboarding' && session.state === 'OPEN_FLOOR') {
-      await transitionToFirstMeeting();
-    }
-
-    streaming = false;
   }
 
   // --- Transition from onboarding to first morning meeting ---
@@ -646,6 +676,7 @@
     if (!session || !db) return;
     session.endedAt = new Date().toISOString();
     await persistOnboardingSummary(db, session);
+    clearSavedSession();
 
     // Create new morning meeting session
     session = createSession('morning_meeting');
@@ -668,14 +699,72 @@
       await persistConversation(db, session);
       await carryOverDeferred(db, session);
     }
+    clearSavedSession();
+  }
+
+  // --- Stop Meeting (user-initiated) ---
+  async function stopMeeting() {
+    console.log('[Dashboard] stopMeeting');
+    voiceActive = false;
+
+    if (s2sMode && speechService) {
+      try {
+        speechService.speak('End the meeting. Thank the user warmly and say goodbye.').catch(() => {});
+        await new Promise(resolve => setTimeout(resolve, 8000));
+      } catch {}
+    }
+
+    speechService?.stopVoice();
+    speechService?.destroy();
+    speechService = null;
+    stopHeartbeat();
+    await closeMeeting();
+    meetingStarted = false;
+    streaming = false;
+    notifyStatusBar();
   }
 
   let pendingVoiceText = '';
+  let heartbeatTimer = null;
+
+  // --- Heartbeat ---
+  async function runHeartbeat() {
+    if (!db || !session) return;
+    try {
+      const gaps = await detectDataGaps(db);
+      const newGaps = filterNewGaps(gaps, session.agenda);
+      for (const gap of newGaps) {
+        const item = createAgendaItem(gap.type, gap.priority, gap.content, gap.question);
+        item.heartbeatId = gap.id;
+        session.agenda.push(item);
+      }
+      if (newGaps.length) syncAgenda();
+      // Periodic conversation snapshot
+      await snapshotConversation(db, session);
+    } catch (err) {
+      console.error('[Heartbeat] tick failed:', err);
+    }
+  }
+
+  function startHeartbeat() {
+    if (heartbeatTimer) return;
+    const interval = HEARTBEAT_INTERVALS.free;
+    // Run immediately on start, then on interval
+    runHeartbeat();
+    heartbeatTimer = setInterval(runHeartbeat, interval);
+  }
+
+  function stopHeartbeat() {
+    if (heartbeatTimer) {
+      clearInterval(heartbeatTimer);
+      heartbeatTimer = null;
+    }
+  }
 
   function toggleVoice() {
     voiceActive = !voiceActive;
-    if (s2sMode) {
-      voiceActive ? startS2sMic() : stopS2sMic();
+    if (s2sMode && speechService) {
+      voiceActive ? speechService.startVoice() : speechService.stopVoice();
     }
   }
 
@@ -690,147 +779,92 @@
   });
 
   onDestroy(() => {
-    closeMeeting();
-    if (s2sMode) stopS2sMic();
-    if (playbackCtx) playbackCtx.close().catch(() => {});
-    speechService?.destroy();
+    stopHeartbeat();
+    saveSession(); // Persist state for HMR / reload recovery
+    speechService?.destroy(); // calls stopVoice internally
   });
 </script>
 
-{#if loading}
-  <div class="loading-state" role="status" aria-label="Loading planning session">
-    <div class="loading-spinner" aria-hidden="true"></div>
-    <span>Setting up your planning session...</span>
+<MeetingBar {goals} {events} animated={mounted} />
+
+<!-- Mobile tabs -->
+<div class="mobile-tabs" role="tablist" aria-label="Meeting sections">
+  <button class="tab-btn" class:active={activeTab === 'chat'} on:click={() => activeTab = 'chat'} role="tab" aria-selected={activeTab === 'chat'} aria-controls="panel-chat" id="tab-chat">Chat</button>
+  <button class="tab-btn" class:active={activeTab === 'tasks'} on:click={() => activeTab = 'tasks'} role="tab" aria-selected={activeTab === 'tasks'} aria-controls="panel-tasks" id="tab-tasks">Tasks</button>
+  <button class="tab-btn" class:active={activeTab === 'dashboard'} on:click={() => activeTab = 'dashboard'} role="tab" aria-selected={activeTab === 'dashboard'} aria-controls="panel-dashboard" id="tab-dashboard">Dashboard</button>
+  <button class="tab-btn" class:active={activeTab === 'agenda'} on:click={() => activeTab = 'agenda'} role="tab" aria-selected={activeTab === 'agenda'} aria-controls="panel-agenda" id="tab-agenda">Agenda</button>
+</div>
+
+<!-- 3-Column Layout -->
+<main class="main-content" aria-label="Meeting dashboard">
+  <div class="column left-column" class:mobile-visible={activeTab === 'tasks'} id="panel-tasks" role="tabpanel" aria-labelledby="tab-tasks">
+    <MeetingTaskList {tasks} onToggle={handleTaskToggle} />
   </div>
-{:else if !meetingStarted}
-  <!-- Pre-meeting lobby -->
-  <div class="lobby" role="main" aria-label="Meeting lobby">
-    <div class="lobby-sidebar">
+
+  <div class="column center-column" class:mobile-visible={activeTab === 'chat'} id="panel-chat" role="tabpanel" aria-labelledby="tab-chat">
+    <ChatPanel {messages} {voiceActive} {streaming} {pendingVoiceText} {speechService} {s2sMode} {liveAiTranscript} {liveUserTranscript} on:click={toggleVoice} on:send={handleSendMessage} />
+  </div>
+
+  <div class="column right-column" class:mobile-visible={activeTab === 'agenda' || activeTab === 'dashboard'}>
+    <div class="panel" class:mobile-hidden={activeTab === 'dashboard'} id="panel-agenda" role="tabpanel" aria-labelledby="tab-agenda">
       <AgendaPanel {agenda} animated={mounted} />
+      {#if !meetingStarted && !loading}
+        <button class="meeting-trigger" on:click={startMeeting} aria-label="Start meeting to work through agenda">
+          Start Meeting
+        </button>
+      {:else if meetingStarted}
+        <button class="meeting-trigger meeting-stop" on:click={stopMeeting} aria-label="Stop meeting and save progress">
+          Stop Meeting
+        </button>
+      {/if}
     </div>
-    <div class="lobby-center">
-      <div class="lobby-type">{session?.type === 'onboarding' ? 'Welcome Meeting' : 'Morning Meeting'}</div>
-      <div class="lobby-hint">{agenda.filter(a => a.status === 'pending' || a.status === 'active').length} agenda items</div>
-      <button class="lobby-start-btn" on:click={startMeeting} aria-label="Start meeting">
-        Start Meeting
-      </button>
+    <div class:mobile-hidden={activeTab === 'agenda'} id="panel-dashboard" role="tabpanel" aria-labelledby="tab-dashboard">
+      <DashboardPanels
+        {habits}
+        {projects}
+        {scorecard}
+        animated={mounted}
+      />
     </div>
   </div>
-{:else}
-  <MeetingBar {goals} {events} animated={mounted} />
+</main>
 
-  <!-- Mobile tabs -->
-  <div class="mobile-tabs" role="tablist" aria-label="Meeting sections">
-    <button class="tab-btn" class:active={activeTab === 'chat'} on:click={() => activeTab = 'chat'} role="tab" aria-selected={activeTab === 'chat'} aria-controls="panel-chat" id="tab-chat">Chat</button>
-    <button class="tab-btn" class:active={activeTab === 'tasks'} on:click={() => activeTab = 'tasks'} role="tab" aria-selected={activeTab === 'tasks'} aria-controls="panel-tasks" id="tab-tasks">Tasks</button>
-    <button class="tab-btn" class:active={activeTab === 'dashboard'} on:click={() => activeTab = 'dashboard'} role="tab" aria-selected={activeTab === 'dashboard'} aria-controls="panel-dashboard" id="tab-dashboard">Dashboard</button>
-    <button class="tab-btn" class:active={activeTab === 'agenda'} on:click={() => activeTab = 'agenda'} role="tab" aria-selected={activeTab === 'agenda'} aria-controls="panel-agenda" id="tab-agenda">Agenda</button>
-  </div>
-
-  <!-- 3-Column Layout -->
-  <main class="main-content" aria-label="Meeting dashboard">
-    <div class="column left-column" class:mobile-visible={activeTab === 'tasks'} id="panel-tasks" role="tabpanel" aria-labelledby="tab-tasks">
-      <PriorityStack {tasks} />
-    </div>
-
-    <div class="column center-column" class:mobile-visible={activeTab === 'chat'} id="panel-chat" role="tabpanel" aria-labelledby="tab-chat">
-      <ChatPanel {messages} {voiceActive} {streaming} {pendingVoiceText} {speechService} {s2sMode} {liveAiTranscript} {liveUserTranscript} on:click={toggleVoice} on:send={handleSendMessage} />
-    </div>
-
-    <div class="column right-column" class:mobile-visible={activeTab === 'agenda' || activeTab === 'dashboard'}>
-      <div class="panel" class:mobile-hidden={activeTab === 'dashboard'} id="panel-agenda" role="tabpanel" aria-labelledby="tab-agenda">
-        <AgendaPanel {agenda} animated={mounted} />
-      </div>
-      <div class:mobile-hidden={activeTab === 'agenda'} id="panel-dashboard" role="tabpanel" aria-labelledby="tab-dashboard">
-        <DashboardPanels
-          {habits}
-          {projects}
-          {scorecard}
-          animated={mounted}
-        />
-      </div>
-    </div>
-  </main>
-
-  <!-- Mobile voice orb -->
+<!-- Mobile voice orb -->
+{#if meetingStarted}
   <div class="mobile-voice-bar">
     <VoiceOrb active={voiceActive} mobile {speechService} {s2sMode} on:click={toggleVoice} on:transcript={handleMobileTranscript} />
   </div>
 {/if}
 
 <style>
-  /* ── Loading State ── */
-  .loading-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    flex: 1;
-    gap: 16px;
-    color: var(--color-ink);
-    font-family: var(--font-hand);
-    font-size: 16px;
-  }
-  .loading-spinner {
-    width: 32px;
-    height: 32px;
-    border: 3px solid var(--color-ink-faint);
-    border-top-color: var(--color-gold);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-  }
-  @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* ── Lobby ── */
-  .lobby {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-  }
-  .lobby-sidebar {
-    width: 280px;
-    border-right: 1px solid var(--color-rule);
-    padding: 20px;
-    overflow-y: auto;
-    background: var(--color-warm);
-    flex-shrink: 0;
-  }
-  .lobby-center {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-  }
-  .lobby-type {
+  /* ── Meeting trigger (in agenda panel) ── */
+  .meeting-trigger {
+    display: block;
+    width: 50%;
+    margin: 10px auto 12px;
+    padding: 5px;
     font-family: var(--font-display);
-    font-size: 28px;
-    color: var(--color-ink);
-    font-weight: 600;
-  }
-  .lobby-hint {
-    font-family: var(--font-ui);
-    font-size: 14px;
-    color: var(--color-ink-light);
-    margin-bottom: 8px;
-  }
-  .lobby-start-btn {
-    font-family: var(--font-display);
-    font-size: 18px;
-    font-weight: 600;
-    color: var(--color-ink);
-    background: var(--color-gold);
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    background: var(--color-accent);
     border: none;
-    padding: 14px 36px;
-    border-radius: 24px;
+    border-radius: 8px;
     cursor: pointer;
-    box-shadow: 0 2px 12px color-mix(in srgb, var(--color-gold) 40%, transparent);
+    box-shadow: 0 1px 6px color-mix(in srgb, var(--color-accent) 30%, transparent);
     transition: transform 0.15s, box-shadow 0.2s;
   }
-  .lobby-start-btn:hover {
-    transform: scale(1.04);
-    box-shadow: 0 4px 20px color-mix(in srgb, var(--color-gold) 50%, transparent);
+  .meeting-trigger:hover {
+    transform: scale(1.02);
+    box-shadow: 0 2px 10px color-mix(in srgb, var(--color-accent) 40%, transparent);
+  }
+  .meeting-stop {
+    background: #b44;
+    box-shadow: 0 1px 4px rgba(180, 68, 68, 0.25);
+  }
+  .meeting-stop:hover {
+    background: #a33;
+    box-shadow: 0 2px 8px rgba(180, 68, 68, 0.35);
   }
 
   /* ── Mobile Tabs ── */
@@ -869,7 +903,7 @@
     display: flex;
     flex-direction: column;
     overflow-y: auto;
-    padding: 20px;
+    padding: 12px 20px 20px;
     scrollbar-width: none;
   }
   .column::-webkit-scrollbar { display: none; }
@@ -919,7 +953,5 @@
       border-top: 1px solid var(--color-rule);
     }
     :global(.mobile-hidden) { display: none; }
-    .lobby { flex-direction: column; }
-    .lobby-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--color-rule); max-height: 40vh; }
   }
 </style>
