@@ -1,0 +1,22 @@
+---
+interface Props { name: string; role: string; bio: string; avatar: string; expertise: string[]; slug: string; }
+import { imgUrl } from '../../lib/imgix';
+const { name, role, bio, avatar, expertise, slug } = Astro.props;
+---
+<a href={`/authors/${slug}`} class="block group">
+  <div class="bg-paper rounded-xl border border-ink-faint shadow-sm p-6 transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-lg">
+    <div class="flex items-start gap-4 mb-4">
+      <img src={imgUrl(avatar, { w: 160, h: 160, fit: 'crop' })} alt={name} width="80" height="80" class="rounded-full border-2 border-ink-faint shrink-0" loading="lazy" />
+      <div>
+        <h3 class="font-display font-bold text-2xl text-forest-dark group-hover:text-accent transition-colors">{name}</h3>
+        <p class="font-ui text-sm text-ink-muted">{role}</p>
+      </div>
+    </div>
+    <p class="font-hand text-ink-light leading-relaxed mb-4 line-clamp-3">{bio}</p>
+    <div class="flex flex-wrap gap-1.5">
+      {expertise.map(tag => (
+        <span class="font-ui text-xs bg-tag-bg text-ink-light border border-ink-faint px-2 py-0.5 rounded-full">{tag}</span>
+      ))}
+    </div>
+  </div>
+</a>

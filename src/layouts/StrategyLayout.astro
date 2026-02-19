@@ -1,0 +1,126 @@
+---
+export const prerender = true;
+import BaseLayout from './BaseLayout.astro';
+import '../styles/blog.css';
+import SiteNav from '../components/SiteNav.astro';
+interface Props {
+  name: string;
+  type: string;
+  tagline: string;
+  description: string;
+  icon?: string;
+  website?: string;
+  pricing?: string;
+  platforms?: string[];
+  verdict: { score: number; summary: string; bestFor: string; notFor: string };
+  pros: string[];
+  cons: string[];
+  publishedAt: Date;
+  headings?: Array<{ depth: number; slug: string; text: string }>;
+}
+const { name, type, tagline, description, icon, website, pricing, platforms, verdict, pros, cons, publishedAt, headings = [] } = Astro.props;
+const dateStr = new Date(publishedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+const scoreClass = verdict.score >= 8 ? 'score-high' : verdict.score >= 6 ? 'score-mid' : 'score-low';
+const typeLabel = { app: 'App', methodology: 'Methodology', technique: 'Technique' }[type] || type;
+const tocHeadings = headings.filter(h => h.depth === 2 || h.depth === 3);
+---
+<BaseLayout title={`${name} Review | ThinkDone Blog`} description={description} ogType="article">
+  <!-- Blog Nav -->
+  <SiteNav solid links={[
+    { href: '/articles', label: 'All Articles' },
+    { href: '/articles', label: 'Articles' },
+  ]} />
+  <!-- Main Content -->
+  <div class="blog-graph-bg min-h-screen" style="border-left: 3px solid var(--color-margin);">
+    <div class="max-w-7xl mx-auto px-6 py-8">
+      <!-- Strategy Header -->
+      <header class="article-header">
+        <div class="flex items-center gap-2 mb-3">
+          <span class="tag-pill">{typeLabel}</span>
+          {pricing && <span class="tag-pill">{pricing}</span>}
+        </div>
+        <div class="flex items-start gap-4">
+          {icon && <span class="text-5xl">{icon}</span>}
+          <div>
+            <h1 class="font-display font-bold text-forest-dark mb-2" style="font-size:clamp(2rem,5vw,3rem);line-height:1.15">
+              {name}
+            </h1>
+            <p class="font-hand text-ink-muted text-lg">{tagline}</p>
+          </div>
+        </div>
+        <div class="flex flex-wrap items-center gap-3 mt-4">
+          {website && <a href={website} class="tag-pill" target="_blank" rel="noopener">Visit Website</a>}
+          {platforms && platforms.map(p => <span class="tag-pill">{p}</span>)}
+          <time class="font-ui text-xs text-ink-muted">{dateStr}</time>
+        </div>
+      </header>
+      <!-- Verdict Card -->
+      <div class="max-w-[680px] mx-auto">
+        <div class="verdict-card bg-paper-bright border-2 border-ink-faint rounded-xl p-6 mb-8 shadow-sm">
+          <div class="flex items-center gap-4 mb-4">
+            <span class={`score-badge ${scoreClass}`}>{verdict.score}</span>
+            <div>
+              <h3 class="font-display font-bold text-forest-dark text-xl mb-0">The Verdict</h3>
+              <p class="font-hand text-ink-light">{verdict.summary}</p>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-4 mt-4 font-ui text-sm">
+            <div>
+              <span class="font-semibold text-success">Best for:</span>
+              <p class="text-ink-light mt-1">{verdict.bestFor}</p>
+            </div>
+            <div>
+              <span class="font-semibold text-danger">Not for:</span>
+              <p class="text-ink-light mt-1">{verdict.notFor}</p>
+            </div>
+          </div>
+        </div>
+        <!-- Pros / Cons -->
+        <div class="pros-cons mb-8" style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+          <div style="border-left:4px solid var(--color-success);padding-left:1rem">
+            <h4 class="font-display font-bold text-success text-lg mb-2">Pros</h4>
+            <ul class="list-disc pl-4 font-hand text-ink-light space-y-1">
+              {pros.map(p => <li>{p}</li>)}
+            </ul>
+          </div>
+          <div style="border-left:4px solid var(--color-danger);padding-left:1rem">
+            <h4 class="font-display font-bold text-danger text-lg mb-2">Cons</h4>
+            <ul class="list-disc pl-4 font-hand text-ink-light space-y-1">
+              {cons.map(c => <li>{c}</li>)}
+            </ul>
+          </div>
+        </div>
+      </div>
+      <!-- Two-column: content + TOC -->
+      <div class="flex gap-12">
+        <main class="flex-1 min-w-0">
+          <article class="blog-prose">
+            <slot />
+          </article>
+        </main>
+        {tocHeadings.length > 0 && (
+          <aside class="hidden xl:block w-56 shrink-0">
+            <nav class="blog-toc">
+              <p class="blog-toc-title">On this page</p>
+              {tocHeadings.map(h => (
+                <a href={`#${h.slug}`} class={h.depth === 3 ? 'depth-3' : ''}>{h.text}</a>
+              ))}
+            </nav>
+          </aside>
+        )}
+      </div>
+    </div>
+  </div>
+  <!-- Blog Footer -->
+  <footer class="blog-footer">
+    <div class="blog-footer-inner">
+      <div class="flex items-center gap-2">
+        <img src="/favicon.png" alt="" width="24" height="24" class="rounded">
+        <span class="font-display font-bold text-paper">Think<span style="opacity:0.35">-</span><span class="text-gold">Done</span><span class="text-paper/40">.ai</span></span>
+      </div>
+      <div class="font-ui text-sm text-paper/50">
+        from <a href="https://xswarm.ai" class="text-gold hover:text-paper transition-colors" target="_blank" rel="noopener">xSwarm.ai</a>
+      </div>
+    </div>
+  </footer>
+</BaseLayout>

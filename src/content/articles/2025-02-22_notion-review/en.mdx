@@ -1,0 +1,387 @@
+---
+title: "Notion: The All-in-One Workspace That Changed Everything (And Almost Didn't)"
+subtitle: "From near-bankruptcy to $10 billion valuation — and whether infinite flexibility is a feature or a bug"
+description: "The story of how Ivan Zhao nearly ran out of money building Notion, the explosion that followed, and an honest assessment of whether Notion's infinite flexibility makes it the perfect productivity tool or a productivity trap in disguise."
+type: "deep-dive"
+author: "kai-nakamura"
+heroImage: "articles/notion-review/hero.webp"
+heroCaption: "The blank canvas that became a $10 billion company"
+heroCredit: ""
+publishedAt: 2025-02-22
+tags: ["productivity", "apps", "reviews", "notion", "workspace", "task-management", "databases"]
+featured: true
+readingTime: "17 min read"
+customBio: "Kai Nakamura has tested 143 productivity apps and counting. He's the guy who reads the privacy policy, checks the API limits, and actually uses the free trial to break things. His reviews focus on what companies don't put in their marketing: the limitations, the gotchas, and the things you'll only discover after three weeks of real use."
+faq:
+  - q: "Is Notion good for task management?"
+    a: "Notion can do task management, but it's not designed primarily for that. It's a database tool that can be configured for tasks, but you'll spend significant time setting it up. Simple task managers like Todoist or Things are faster. Use Notion if you want tasks integrated with notes, docs, and wikis in one system."
+  - q: "How much does Notion cost?"
+    a: "Notion has a generous free tier for personal use. Plus plans start at $10/user/month (billed annually) with unlimited file uploads and version history. Business plans are $18/user/month with advanced features. Enterprise pricing is custom."
+  - q: "What is the difference between Notion and Obsidian?"
+    a: "Notion is a cloud-based all-in-one workspace with databases, collaboration, and real-time sync. Obsidian is a local-first markdown editor focused on networked thought and knowledge management. Obsidian is faster and more private. Notion is more collaborative and versatile. Different philosophies."
+  - q: "Why is Notion so slow sometimes?"
+    a: "Notion loads data from the cloud on every page load, and complex database queries with lots of relations and roll-ups can be computationally expensive. Large workspaces with thousands of pages experience noticeable lag. Notion is working on performance but it's inherent to their architecture."
+  - q: "Can I use Notion offline?"
+    a: "Notion has limited offline support. You can view and edit recently accessed pages offline, but new page creation and database access are restricted. If you need robust offline capability, tools like Obsidian or Apple Notes are better choices."
+  - q: "Is Notion secure and private?"
+    a: "Notion data is encrypted in transit and at rest, but Notion the company can theoretically access your data (it's not end-to-end encrypted). For most users this is fine, but if you're handling sensitive information, consider local-first tools or Notion's Enterprise plan with additional security controls."
+---
+
+import StudyCard from '../../../components/mdx/StudyCard.astro';
+import VideoEmbed from '../../../components/mdx/VideoEmbed.astro';
+import Callout from '../../../components/mdx/Callout.astro';
+import StatBlock from '../../../components/mdx/StatBlock.astro';
+import QuoteBlock from '../../../components/mdx/QuoteBlock.astro';
+import QandA from '../../../components/mdx/QandA.astro';
+
+In the summer of 2015, Ivan Zhao was down to his last $150,000. He'd been building Notion for three years with his co-founder Simon Last, living off savings and the proceeds from selling a previous startup. The product wasn't ready. Users weren't coming. Investors weren't interested.
+
+Zhao faced a decision: give up and get a real job, or burn through the last of the money and see if they could ship something people actually wanted.
+
+They kept building.
+
+Two years later, in 2017, Notion launched publicly. The response was immediate and overwhelming. Within months, thousands of users. Within a year, hundreds of thousands. By 2021, Notion had raised $275 million at a $10 billion valuation and was one of the fastest-growing productivity apps in history.
+
+What changed between 2015 and 2017? Zhao figured out what Notion actually was.
+
+It wasn't a note-taking app. It wasn't a wiki. It wasn't a project management tool. It was all of those things — or more accurately, it was a blank canvas where you could build all of those things yourself.
+
+That flexibility is Notion's genius. It's also Notion's curse.
+
+## The Vision: LEGO Blocks for Knowledge Work
+
+Ivan Zhao isn't a typical Silicon Valley founder. He's a designer who studied computer science at the University of British Columbia, a minimalist who obsesses over interfaces, and someone who thinks in decades rather than quarters.
+
+<QuoteBlock cite="Ivan Zhao" role="Co-founder and CEO of Notion">
+We're not building an app. We're building a tool for building apps. The vision is that every team should be able to create exactly the software they need, without engineers. Notion is LEGO blocks for knowledge work.
+</QuoteBlock>
+
+That LEGO metaphor is perfect. Notion gives you blocks — text, headings, databases, toggles, embeds, code snippets, images — and lets you arrange them however you want. No forced templates. No mandatory fields. No "this is how you have to work."
+
+Want a personal task manager? Build it. Want a team wiki? Build it. Want a CRM? Build it. Want a content calendar with linked databases, filtered views, and automated workflows? Build that too.
+
+The blocks themselves are simple. The power comes from composition. You can nest blocks inside blocks, create databases of pages, link databases together, filter and sort dynamically, and build custom views for different contexts.
+
+This is why Notion resonates so strongly with a certain type of user: people who've always felt constrained by existing apps and wanted to build their own system. Notion lets them do that without learning to code.
+
+<StatBlock
+  number="$10B"
+  label="Notion's valuation after 2021 funding round"
+  source="TechCrunch, October 2021"
+/>
+
+## What Notion Does Brilliantly
+
+Before we get to the problems (and there are problems), let's talk about what Notion absolutely nails.
+
+### 1. The Block-Based Editor
+
+Notion's editor is one of the best interfaces ever built for structured writing. Every element is a block that you can drag, rearrange, convert, or delete. Type `/` and you get a menu of block types. Type `##` and you get a heading. Type `-` and you get a bullet list.
+
+It's intuitive enough for non-technical users but powerful enough for complex documents. You can build everything from simple notes to elaborate documentation systems using the same interface.
+
+The block metaphor also means you can mix content types freely. Text, code, images, embeds, databases — all living in the same document without feeling disjointed.
+
+### 2. Databases That Don't Feel Like Databases
+
+This is Notion's true innovation. Databases are usually intimidating, technical things. Notion made them visual and approachable.
+
+A Notion database is just a collection of pages with properties. You can view those pages as:
+- A table (traditional database view)
+- A kanban board (Trello-style)
+- A calendar (date-based)
+- A gallery (card-based)
+- A timeline (Gantt chart)
+- A list (simple view)
+
+Same data, different views. You build one task database and view it as a kanban board for status tracking, a table for batch editing, and a calendar for deadline tracking.
+
+Properties can be text, numbers, dates, selections, multi-selects, checkboxes, URLs, emails, phone numbers, files, and more. You can create formulas. You can roll up properties from related databases. You can filter and sort with complex logic.
+
+It's like having the power of Airtable but inside a notes app. For people who think in systems and relationships, this is incredibly powerful.
+
+### 3. Relational Databases and Roll-ups
+
+Here's where Notion gets really interesting: you can link databases together and reference data across them.
+
+Example: You have a Projects database and a Tasks database. Each task has a relation to a project. Each project can roll up its tasks to show completion percentage, hours logged, or how many tasks are overdue.
+
+You can build sophisticated systems this way:
+- Content calendars with linked author, status, and publication databases
+- Client CRMs with linked projects, invoices, and contacts
+- Personal knowledge management with linked notes, sources, and topics
+- Product roadmaps with linked features, user feedback, and release dates
+
+This is what makes Notion feel like custom software rather than a generic app. You're building a system tailored exactly to how you work.
+
+### 4. The Template Ecosystem
+
+Notion's community has built thousands of templates for every use case imaginable. Task managers, habit trackers, reading lists, workout planners, budget trackers, recipe databases, travel planners, class notes, job search trackers, wedding planners, and on and on.
+
+You can start with a template and customize it, or build from scratch. This dramatically reduces the cold-start problem of "what do I do with this blank canvas?"
+
+The template marketplace has become a secondary economy, with popular template creators earning significant income selling elaborate systems.
+
+### 5. Collaboration Without Friction
+
+Notion's collaboration features work remarkably well. Multiple people can edit the same page simultaneously. Comments thread inline. Permissions are granular. Sharing is easy.
+
+For teams, this is huge. Notion becomes the single source of truth where docs, tasks, wikis, and project management all live together. No more context switching between tools.
+
+### 6. The API and Integrations
+
+In 2021, Notion released a public API, and the ecosystem exploded. Now you can:
+- Sync tasks to/from other tools
+- Auto-create pages from forms or webhooks
+- Build custom interfaces on top of Notion databases
+- Extract data for analysis or reporting
+- Integrate with Slack, Zapier, Make, and hundreds of other services
+
+This turned Notion from a standalone app into a platform. Teams are building entire business operations on Notion with custom automations connecting everything.
+
+## The Hard Problems: Where Notion Struggles
+
+Notion is powerful. But that power comes with costs that many users don't realize until they're deep in the weeds.
+
+### 1. The Overwhelming Flexibility
+
+Here's what nobody talks about: Notion's infinite flexibility is a trap.
+
+When you open Notion for the first time, you see a blank page. "What do you want to create?" This is simultaneously liberating and paralyzing.
+
+<StudyCard
+  title="The Paradox of Choice: Why More Is Less"
+  authors="Schwartz, Barry"
+  year={2004}
+  journal="Book: The Paradox of Choice"
+  finding="Increased choice often leads to decision paralysis, decreased satisfaction, and increased anxiety. When people have too many options, they struggle to make decisions and are less satisfied with their choices. This applies to product features as much as consumer goods."
+  pdfUrl=""
+/>
+
+With Notion, you don't just use a task manager — you *build* a task manager. And there are infinite ways to build it. Should tasks be in one database or separate databases by project? Should you use a kanban board or a table? What properties should each task have? How should you structure projects?
+
+For productivity nerds who love building systems, this is heaven. For people who just want to get work done, it's quicksand.
+
+I've watched dozens of people spend weeks building elaborate Notion workspaces — custom databases, filtered views, relational properties, roll-ups, templates — and then abandon the whole system after a month because maintaining it became a second job.
+
+<Callout type="warning" title="The Meta-Work Trap">
+Notion enables an insidious form of productive procrastination: spending more time building and optimizing your productivity system than actually being productive. When organizing your task manager feels like work, you're in trouble.
+</Callout>
+
+### 2. The Performance Problem
+
+Notion is slow. Not unbearably slow, but noticeably slow compared to native apps or local-first tools.
+
+Every time you open a page, Notion has to fetch data from servers. If that page contains database queries with filters, sorts, and roll-ups across multiple related databases, the load time can stretch to 2-3 seconds. For complex workspaces with thousands of pages, navigation can feel sluggish.
+
+This is architectural. Notion is a web app built on a cloud database. Everything lives in the cloud, which means everything requires network round trips. They've optimized extensively, but there are limits to how fast a cloud-first architecture can be.
+
+Compare this to local-first apps like Obsidian, which open instantly because everything is stored locally. Or native apps like Things or Apple Notes, which feel instantaneous because they're built with platform-specific technologies.
+
+For casual use, Notion's speed is fine. For power users who live in the app all day, the lag becomes noticeable and frustrating.
+
+### 3. Offline Support Is Limited
+
+Because Notion is cloud-first, offline support is minimal. You can view and edit recently accessed pages offline, but you can't create new pages or access database views reliably.
+
+For people who work on planes, trains, or in areas with unreliable internet, this is a significant limitation. You can't trust that your productivity tool will be available when you need it.
+
+### 4. The Learning Curve
+
+Notion markets itself as easy to use, and the basics are. But building sophisticated systems requires understanding:
+- How databases work
+- How relations and roll-ups work
+- How formulas work
+- How filters and sorts interact
+- How permissions and sharing work
+
+This isn't trivial. I've seen teams spend weeks getting everyone comfortable with Notion, and even then, there's usually one "Notion expert" who builds everything while everyone else just uses it.
+
+The power comes with complexity. If you're not willing to invest the time to understand how Notion works, you'll probably use 10% of its capability and wonder what the hype is about.
+
+### 5. It's Not Actually Great at Any One Thing
+
+Here's the uncomfortable truth: Notion can do tasks, notes, wikis, and databases — but it's not *best in class* at any of them.
+
+**For tasks:** Todoist, Things, and OmniFocus are faster, cleaner, and more focused.
+
+**For notes:** Obsidian, Apple Notes, and Bear are simpler and more reliable.
+
+**For wikis:** Confluence and GitBook have better version control and permissions.
+
+**For databases:** Airtable is more powerful and performant.
+
+**For project management:** Asana, ClickUp, and Linear are more robust.
+
+Notion's value is integration — having everything in one place. But if you don't actually need everything in one place, specialized tools will serve you better.
+
+### 6. The Privacy Question
+
+Notion's data is encrypted in transit and at rest, but it's not end-to-end encrypted. That means Notion the company can theoretically access your data. For most users this is fine, but for sensitive work (legal, medical, financial), it's a consideration.
+
+Additionally, Notion's servers are subject to U.S. jurisdiction, which has implications for international users concerned about data sovereignty.
+
+Local-first tools like Obsidian or Logseq store everything on your device, giving you complete control. Cloud tools like Notion require trust in the service provider.
+
+## The Notion Learning Curve: What It Takes to Master
+
+If you're committed to Notion, here's what you need to learn:
+
+**Week 1:** Basic pages, blocks, and formatting. Think of it like learning to use Google Docs.
+
+**Week 2:** Simple databases with table and board views. This is where Notion starts feeling different from other tools.
+
+**Week 3:** Database properties, filters, and sorts. Now you're building custom views.
+
+**Week 4:** Relations between databases and roll-up properties. This is where the power comes in but also where complexity explodes.
+
+**Week 5+:** Formulas, advanced templates, and automation. You're now a Notion power user building sophisticated systems.
+
+Most people stall out at Week 2 or 3. They understand that Notion is powerful but don't invest the time to unlock that power. They end up with basic notes and task lists — things they could do more easily in simpler apps.
+
+The people who love Notion are the ones who push through to Week 4-5 and start building custom systems. At that point, Notion becomes indispensable because it's molded exactly to their workflow.
+
+But that's a significant time investment. And you have to enjoy building systems. If you don't, Notion will frustrate you.
+
+## Who Should Use Notion in 2025?
+
+After using Notion extensively for four years, here's my honest assessment:
+
+### Notion is Excellent For:
+
+**Teams that need everything centralized.** If you're tired of having docs in Google Drive, tasks in Asana, notes in Evernote, and wikis in Confluence, Notion can replace all of them. The value is consolidation.
+
+**System builders and productivity enthusiasts.** If you love building custom workflows and optimizing systems, Notion is a playground. You can build exactly what you want.
+
+**Students and researchers.** Notion's databases are perfect for managing classes, notes, papers, and research sources. The ability to link everything together is incredibly valuable for knowledge work.
+
+**Small teams and startups.** Notion is cost-effective and flexible enough to grow with you. You can start simple and add sophistication as needed.
+
+**Content creators and writers.** Notion's content calendar templates and database views work well for managing editorial workflows, especially with multiple collaborators.
+
+### Notion is NOT Ideal For:
+
+**People who just want a simple task manager.** If you just need to track tasks, use Todoist or Things. They're faster, cleaner, and designed specifically for that purpose.
+
+**People who need offline reliability.** If you work offline frequently, choose local-first tools like Obsidian or native apps like Apple Notes.
+
+**People who value speed above all.** If every second counts and you're bothered by lag, native apps will feel better.
+
+**People who aren't willing to invest learning time.** Notion rewards time investment but punishes casual use. If you don't want to learn the system, you won't get value from it.
+
+**Large enterprises with complex security requirements.** While Notion has enterprise features, tools like Confluence or SharePoint offer more granular controls and compliance features.
+
+## Pricing: Is It Worth Paying For?
+
+Notion's free tier is remarkably generous:
+- Unlimited pages and blocks
+- Unlimited members (for personal use)
+- 7-day version history
+- 5MB file upload limit
+
+For individuals, the free tier is often sufficient. Where you hit limits:
+
+**Plus ($10/user/month, billed annually):**
+- Unlimited file uploads
+- 30-day version history
+- Bulk exports
+- Better analytics
+
+This is where most serious individual users land.
+
+**Business ($18/user/month, billed annually):**
+- Everything in Plus
+- Private teamspaces
+- Advanced permissions
+- SAML SSO
+- User provisioning
+
+For teams of 10+ people, Business makes sense.
+
+**Enterprise (Custom pricing):**
+- Everything in Business
+- Dedicated success manager
+- Advanced security and compliance
+- Audit logs
+- Custom contracts
+
+This is for companies with 100+ users and enterprise requirements.
+
+<QandA
+  question="Should I pay for Notion or stick with free?"
+  answer="If you're an individual using Notion casually, free is fine. Upgrade to Plus if you need to upload files larger than 5MB or want longer version history. Teams should start with Business tier for better permissions and admin controls. The pricing is reasonable compared to paying for separate tools for docs, wikis, tasks, and databases."
+/>
+
+## Notion AI: Real Intelligence or Marketing Hype?
+
+In 2023, Notion added AI features, joining the race to integrate GPT-powered capabilities. Here's what Notion AI actually does:
+
+**Writing assistance:** Generate text, improve writing, summarize, translate, explain concepts.
+
+**Content generation:** Create outlines, blog posts, meeting agendas, job descriptions, and more from prompts.
+
+**Data extraction:** Pull action items from meeting notes, create summaries from long documents.
+
+**Database assistance:** Auto-fill properties, generate content for database entries.
+
+**The verdict:** Notion AI is useful for content creation and summarization but not for productivity planning. It won't build your daily plan, prioritize your tasks, or schedule your work. It's a writing assistant living inside a productivity tool.
+
+If you compare it to AI-first productivity apps like ThinkDone or Motion, Notion AI is a feature add-on, not an intelligence layer. It helps you create content, but it doesn't help you decide what to work on or when to work on it.
+
+For $10/month (add-on to your existing Notion subscription), it's reasonable if you do a lot of writing in Notion. But it's not the AI planning revolution some people were hoping for.
+
+## The Notion Alternatives in 2025
+
+Notion created a category, but it's no longer alone:
+
+**Obsidian** is the choice for local-first, privacy-focused users. Markdown files, bidirectional links, graph view, extensive plugin ecosystem. Faster than Notion but less visual and collaborative.
+
+**Anytype** is privacy-focused like Obsidian but with a more Notion-like interface. Local-first, end-to-end encrypted, peer-to-peer sync. Still early but promising.
+
+**Coda** is like Notion but with more powerful formulas and automations. Better for building custom apps, but also more complex.
+
+**ClickUp** tries to be everything Notion is plus project management. More features but also more overwhelming.
+
+**Airtable** is databases first, content second. More powerful for data management, less good for notes and docs.
+
+**Craft** is Mac/iOS only but gorgeous and fast. Like Notion but with better design and native performance.
+
+**AppFlowy** is open-source Notion alternative. Promising but still maturing.
+
+## The Verdict: Transformative for Some, Overkill for Others
+
+After four years with Notion, I've come to appreciate both its brilliance and its limitations.
+
+Notion genuinely changed what's possible for non-technical teams. The ability to build custom databases, link information together, and create tailored systems without code is revolutionary. For the right user — someone who values flexibility, enjoys building systems, and needs everything in one place — Notion is transformative.
+
+But it's not for everyone. In fact, it's probably not for most people.
+
+The infinite flexibility that makes Notion powerful for system builders makes it overwhelming for casual users. The learning curve is real. The performance issues are noticeable. The offline limitations are frustrating. And the time investment required to truly leverage Notion's power is significant.
+
+<Callout type="insight" title="The Bottom Line">
+Use Notion if you need a unified workspace for teams, love building custom systems, and are willing to invest time in learning how it works. Don't use Notion if you want a simple task manager, need offline reliability, or value speed and simplicity over flexibility. And be honest with yourself about whether you want to build a productivity system or just use one.
+</Callout>
+
+The story of Notion is the story of a founder who almost ran out of money but kept building because he believed in a vision. That vision — LEGO blocks for knowledge work — has resonated with millions of users and created a $10 billion company.
+
+But like LEGO itself, Notion is most valuable when you enjoy the building process, not just the end result. Some people love spending hours building elaborate LEGO sets. Others just want to play with the finished castle.
+
+Neither is wrong. But you should know which kind of person you are before committing to Notion.
+
+Because once you've built an elaborate workspace with interconnected databases, custom views, and relational properties, switching to something else feels like starting over. Notion's flexibility is also its lock-in.
+
+Ivan Zhao almost gave up in 2015 when he was down to his last $150,000. He didn't. He kept building, found product-market fit, and changed how millions of people work.
+
+But his product isn't for everyone. And that's okay.
+
+The question isn't whether Notion is good. It clearly is. The question is whether it's good *for you*.
+
+And that depends entirely on whether you want a tool that adapts to you — or whether you want a tool that just works without requiring you to think about it.
+
+Notion is firmly in the former camp. If that's what you need, it's brilliant. If not, there are simpler options that will serve you better.
+
+The only mistake is choosing Notion because everyone else uses it, then being surprised when you have to invest time to make it work.
+
+Notion rewards effort. It punishes casual use.
+
+Know that going in, and you'll know whether it's the right choice for you.

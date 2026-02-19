@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="600" viewBox="0 0 1400 600">
+  <rect fill="#f4efe6" width="1400" height="600"/>
+  <!-- Left app icon (ThinkDone) -->
+  <rect fill="#2d4a2e" x="350" y="200" width="200" height="200" rx="40"/>
+  <circle cx="450" cy="250" r="25" fill="none" stroke="#c69c3f" stroke-width="5"/>
+  <path d="M 435 250 L 445 260 L 465 235" fill="none" stroke="#c69c3f" stroke-width="5" stroke-linecap="round"/>
+  <circle cx="410" cy="320" r="8" fill="#f4efe6"/>
+  <circle cx="450" cy="320" r="8" fill="#f4efe6"/>
+  <circle cx="490" cy="320" r="8" fill="#f4efe6"/>
+  <text x="450" y="370" font-family="sans-serif" font-size="18" fill="#f4efe6" text-anchor="middle" font-weight="bold">ThinkDone</text>
+  <!-- VS text -->
+  <text x="700" y="310" font-family="sans-serif" font-size="80" fill="#3a3226" text-anchor="middle" font-weight="bold">VS</text>
+  <!-- Right app icon (Todoist) -->
+  <rect fill="#e44232" x="850" y="200" width="200" height="200" rx="40"/>
+  <circle cx="950" cy="270" r="18" fill="none" stroke="#fffdf8" stroke-width="4"/>
+  <path d="M 942 270 L 946 274 L 958 262" fill="none" stroke="#fffdf8" stroke-width="4" stroke-linecap="round"/>
+  <circle cx="950" cy="330" r="18" fill="none" stroke="#fffdf8" stroke-width="4"/>
+  <path d="M 942 330 L 946 334 L 958 322" fill="none" stroke="#fffdf8" stroke-width="4" stroke-linecap="round"/>
+  <text x="950" y="375" font-family="sans-serif" font-size="18" fill="#fffdf8" text-anchor="middle" font-weight="bold">Todoist</text>
+  <!-- Comparison arrows -->
+  <path d="M 560 300 L 630 300" fill="none" stroke="#7a6a5a" stroke-width="3" stroke-dasharray="8,5"/>
+  <path d="M 770 300 L 840 300" fill="none" stroke="#7a6a5a" stroke-width="3" stroke-dasharray="8,5"/>
+  <!-- Feature comparison dots -->
+  <circle cx="700" cy="150" r="6" fill="#2d4a2e"/>
+  <circle cx="700" cy="450" r="6" fill="#e44232"/>
+  <circle cx="500" cy="120" r="6" fill="#c69c3f"/>
+  <circle cx="900" cy="120" r="6" fill="#c69c3f"/>
+</svg>

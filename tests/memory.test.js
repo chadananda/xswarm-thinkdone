@@ -45,7 +45,7 @@ const memories = [
   ['COMMITMENT [due Feb 12]: Deliver WholeReader review to Gilbert', 'wholereader', 'commitment'],
   ['IDEA: BlogWorks + ThinkDone share AI-via-natural-channel arch — shared engine', 'blogworks', 'idea'],
   ['DECISION [Feb 10]: Defer BlogWorks architecture to next week', 'blogworks', 'decision'],
-  ['DECISION [Feb 9]: Product name: ThinkDone.ai (not Planboost)', 'thinkdone', 'decision'],
+  ['DECISION [Feb 9]: Product name: ThinkDone at think-done.com (not Planboost)', 'thinkdone', 'decision'],
   ['BLOCKER [Feb 10]: SifterSearch ingester not working — blocks DRBI eval', 'siftersearch', 'blocker'],
   ['PATTERN: Tuesday build sprints consistently under-scoped', '', 'pattern'],
   ['COMMITMENT [due Feb 14]: Meet DRBI writer in Casa Grande', 'drbi', 'commitment'],

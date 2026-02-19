@@ -1,0 +1,49 @@
+---
+interface Props {
+  title: string; description: string; type: string;
+  heroImage?: string; author: { name: string; avatar: string; };
+  publishedAt: string; readingTime?: string; slug: string;
+}
+import { imgUrl, imgSrcset } from '../../lib/imgix';
+const { title, description, type, heroImage, author, publishedAt, readingTime, slug } = Astro.props;
+const typeColors: Record<string, string> = {
+  strategy: 'article-badge-strategy',
+  guide: 'article-badge-guide',
+  opinion: 'article-badge-opinion',
+  review: 'article-badge-review',
+  'deep-dive': 'article-badge-review',
+  comparison: 'article-badge-strategy',
+  roundup: 'article-badge-guide',
+};
+const badgeClass = typeColors[type] || 'article-badge-guide';
+const cardParams = { w: 800, h: 500, fit: 'crop' };
+const heroSrc = heroImage ? imgUrl(heroImage, cardParams) : '';
+const heroSrcset = heroImage ? imgSrcset(heroImage, cardParams, [400, 800]) : '';
+const avatarSrc = author.avatar ? imgUrl(author.avatar, { w: 64, h: 64, fit: 'crop', facepad: 2 }) : '';
+---
+<a href={`/articles/${slug}/`} class="article-card-link group">
+  <span class:list={['article-badge', badgeClass]}>{type}</span>
+  <article class="article-card">
+    <div class="article-card-image">
+      {heroSrc ? (
+        <img src={heroSrc} srcset={heroSrcset} sizes="(max-width: 640px) 100vw, 400px" width="800" height="500" alt="" loading="lazy" decoding="async" />
+      ) : (
+        <div class="article-card-image-fallback"></div>
+      )}
+      <div class="article-card-gradient"></div>
+    </div>
+    <div class="article-card-body">
+      <h3 class="article-card-title">{title}</h3>
+      <p class="article-card-desc">{description}</p>
+      <div class="article-card-meta">
+        {avatarSrc ? (
+          <img src={avatarSrc} width="28" height="28" alt={author.name} class="article-card-avatar" loading="lazy" />
+        ) : (
+          <span class="article-card-avatar-placeholder">{author.name.charAt(0)}</span>
+        )}
+        <span class="article-card-author">{author.name}</span>
+      </div>
+    </div>
+    {readingTime && <div class="article-card-footer"><span class="article-card-reading">{readingTime}</span></div>}
+  </article>
+</a>

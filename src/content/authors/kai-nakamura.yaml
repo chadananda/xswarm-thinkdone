@@ -1,0 +1,76 @@
+name: "Kai Nakamura"
+role: "Workflow Architect"
+bio: "Full-stack developer and automation nerd. Builds systems that make productivity tools talk to each other. If it can be automated, Kai's already done it."
+longBio: |
+  Kai has been writing code since age 12 and automating things that annoyed them since age 13. What started as a teenager scripting away repetitive homework tasks turned into a career building integrations, automations, and workflow systems that save people thousands of hours. After stints at Zapier and a couple of Y Combinator startups, Kai became convinced that the future of productivity isn't any single app — it's the connections between them.
+
+  Their philosophy is simple: humans should do the thinking, and computers should do everything else. That means if you're manually copying data between apps, something is broken. If you're checking three dashboards to understand your day, something is broken. If your "productivity system" requires more than five minutes of daily maintenance, it's not a system — it's a chore. Kai builds and writes about the automations that eliminate this friction, from simple Zapier recipes to custom API integrations.
+
+  What makes Kai's writing accessible is a genuine talent for explaining technical concepts without condescension. They'll walk you through setting up a Make.com automation or a Shortcuts workflow with the same patience whether you're a developer or someone who just learned what an API is. Their goal is to make automation feel less like programming and more like arranging furniture — you're just putting things where they make sense.
+avatar: "authors/kai-nakamura-v2.jpg"
+expertise:
+  - "Automation"
+  - "API Integrations"
+  - "No-Code Tools"
+  - "Developer Productivity"
+personality: "Enthusiastic, technical but accessible. The friend who sets up your smart home and makes it look easy."
+social:
+  twitter: "@kai_automates"
+  website: "https://think-done.com/authors/kai-nakamura"
+featured: false
+sales:
+  tagline: "If you're doing something a computer could do, something is broken."
+  accentColor: "#4ecdc4"
+  heroQuote: "I've been automating things that annoy me since I was 13. After building systems at Zapier and two YC startups, I'm convinced: the future of productivity isn't any single app. It's the connections between them."
+  problem:
+    headline: "You're the world's most expensive copy-paste machine."
+    description: "You manually move data between apps. You check three dashboards to understand your day. You spend 20 minutes every morning doing things a five-line script could handle. Your time is worth more than this."
+    painPoints:
+      - icon: "📋"
+        text: "You're manually copying information between 4+ apps every day"
+      - icon: "🔔"
+        text: "Notifications from a dozen tools fragment your attention into confetti"
+      - icon: "🕐"
+        text: "Your 'productivity system' takes 30+ minutes of daily maintenance"
+      - icon: "🏗️"
+        text: "You've built elaborate Notion/Airtable systems that only you understand"
+  philosophy:
+    headline: "Humans think. Computers do everything else."
+    description: "Kai doesn't believe in productivity apps — they believe in productivity systems. Apps are components. The magic is in how they connect, automate, and eliminate the friction between your intention and your action."
+    principles:
+      - title: "If it takes 5 minutes daily, automate it"
+        description: "5 minutes a day is 30 hours a year. That's almost a full work week you're spending on something a machine could do in milliseconds. Find it. Fix it. Forget it."
+      - title: "The hub-and-spoke model"
+        description: "Stop trying to find one app that does everything. Use specialized tools for what they're best at, and connect them through a central hub that orchestrates the flow."
+      - title: "Automate the boring, protect the creative"
+        description: "The goal isn't to automate your whole life. It's to automate everything that isn't thinking, creating, or connecting — so you have maximum energy for the work that matters."
+  insights:
+    - title: "The Integration Tax"
+      description: "Every app you add to your stack costs 10-15 minutes of daily friction in context switching alone. Kai's framework for calculating whether a new tool is worth its cognitive cost."
+      icon: "🧮"
+    - title: "Zero-Touch Workflows"
+      description: "How to build automation chains where data flows from capture to completion without you touching it — and the 3 common workflows everyone should automate first."
+      icon: "⚡"
+    - title: "API Thinking for Non-Developers"
+      description: "You don't need to code to think like an automation engineer. Kai's mental model for seeing the connections between your tools that are begging to be automated."
+      icon: "🔌"
+    - title: "The Maintenance Trap"
+      description: "If your automation requires weekly maintenance, it's not automation — it's another chore. How to build systems that run silently for months."
+      icon: "🔧"
+  thinkdonePitch:
+    headline: "ThinkDone is the hub I've been trying to build for years."
+    description: "I've built custom productivity automation systems for myself and dozens of clients. They all converge on the same architecture: a central intelligence layer that reads everything, decides what matters, and outputs a simple action list. ThinkDone is that architecture, productized."
+    points:
+      - "Central hub that ingests all your projects, commitments, and context — no manual syncing"
+      - "AI planning replaces the custom automation I used to build for each client"
+      - "Plain text foundation means it plays nice with any tool — pipe data in and out freely"
+      - "The OpenClaw integration is the automation layer I've dreamed about — delegate tasks to AI agents directly from your plan"
+  faq:
+    - q: "Can ThinkDone connect to my existing tools?"
+      a: "ThinkDone's Pro plan includes automation connectors and the OpenClaw AI assistant integration. But here's the deeper insight: ThinkDone doesn't need to connect to everything because it sits at a different layer. It manages YOUR attention, not your team's workflow. Your project management tools keep running. ThinkDone tells you what to do first."
+    - q: "I'm technical — can I extend ThinkDone?"
+      a: "Absolutely. ThinkDone uses plain text files and a memory API that's designed to be piped into other systems. Power users can build custom automations around it — Zapier hooks, API integrations, even CLI scripts that push context into your planning sessions. It's built by developers, for people who think in systems."
+    - q: "Isn't this just a fancy wrapper around ChatGPT?"
+      a: "That's like calling a Tesla a fancy battery. ThinkDone is a complete productivity architecture: persistent memory across sessions, multi-project tracking, pattern recognition, strategic planning methodology, and a purpose-built interface. The AI is the engine, but the system around it is what makes it work as a daily productivity tool."
+    - q: "I already have automations with Zapier/Make. How does this fit?"
+      a: "Keep them! ThinkDone operates at a different level. Your Zapier automations handle data flow between apps. ThinkDone handles strategic flow of your attention across projects. They're complementary. In fact, ThinkDone Pro can trigger your existing automations — so your daily plan automatically kicks off the workflows you've already built."

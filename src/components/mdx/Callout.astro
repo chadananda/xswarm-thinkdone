@@ -1,0 +1,31 @@
+---
+interface Props {
+  type?: 'tip' | 'warning' | 'research' | 'quote' | 'insight' | 'strategy' | 'financial' | 'technical' | 'future' | 'philosophy';
+  title?: string;
+}
+const { type = 'tip', title } = Astro.props;
+const config: Record<string, { icon: string; label: string; borderClass: string; bgClass: string }> = {
+  tip:        { icon: '💡', label: 'Pro Tip',       borderClass: 'border-success',  bgClass: 'bg-success/8' },
+  warning:    { icon: '⚠️',  label: 'Heads Up',      borderClass: 'border-gold',     bgClass: 'bg-gold/8' },
+  research:   { icon: '🔬', label: 'Research Note',  borderClass: 'border-purple',   bgClass: 'bg-purple/8' },
+  quote:      { icon: '💬', label: 'Notable',        borderClass: 'border-accent',   bgClass: 'bg-accent/8' },
+  insight:    { icon: '🎯', label: 'Key Insight',    borderClass: 'border-accent',   bgClass: 'bg-accent/8' },
+  strategy:   { icon: '♟️',  label: 'Strategy',       borderClass: 'border-success',  bgClass: 'bg-success/8' },
+  financial:  { icon: '💰', label: 'Cost Analysis',  borderClass: 'border-gold',     bgClass: 'bg-gold/8' },
+  technical:  { icon: '⚙️',  label: 'Technical Note', borderClass: 'border-purple',   bgClass: 'bg-purple/8' },
+  future:     { icon: '🔮', label: 'Looking Ahead',  borderClass: 'border-accent',   bgClass: 'bg-accent/8' },
+  philosophy: { icon: '🧭', label: 'Design Philosophy', borderClass: 'border-purple', bgClass: 'bg-purple/8' },
+};
+const { icon, label, borderClass, bgClass } = config[type] || config.tip;
+---
+<aside class:list={['callout border-l-4 rounded-r-lg py-5 px-6 my-8 blog-reveal', borderClass, bgClass]} data-reveal="right">
+  <div class="flex gap-3 items-start">
+    <span class="text-lg leading-none mt-0.5">{icon}</span>
+    <div>
+      <p class="font-ui text-xs font-bold uppercase tracking-widest mb-2" style="color:var(--color-ink-muted)">{title || label}</p>
+      <div class="font-hand text-ink-light text-base leading-relaxed [&>p]:m-0 [&>p:not(:last-child)]:mb-2">
+        <slot />
+      </div>
+    </div>
+  </div>
+</aside>

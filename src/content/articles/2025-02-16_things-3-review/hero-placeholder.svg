@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="600" viewBox="0 0 1400 600">
+  <rect fill="#f4efe6" width="1400" height="600"/>
+  <!-- Minimal Mac window -->
+  <rect fill="#fffdf8" x="300" y="100" width="800" height="400" rx="12" stroke="#c4b5a0" stroke-width="1"/>
+  <!-- Window controls -->
+  <circle cx="320" cy="120" r="6" fill="#e85d4a"/>
+  <circle cx="340" cy="120" r="6" fill="#f4be50"/>
+  <circle cx="360" cy="120" r="6" fill="#62c354"/>
+  <!-- Sidebar -->
+  <rect fill="#f8f6f4" x="300" y="140" width="200" height="360"/>
+  <!-- Sidebar items with icons -->
+  <circle cx="330" cy="170" r="8" fill="#4a90e2"/>
+  <text x="350" y="175" font-family="sans-serif" font-size="14" fill="#3a3226">Inbox</text>
+  <rect fill="none" stroke="#c69c3f" stroke-width="2" x="322" y="195" width="16" height="16" rx="3"/>
+  <text x="350" y="207" font-family="sans-serif" font-size="14" fill="#3a3226">Today</text>
+  <path d="M 326 230 L 334 238 L 326 246 L 326 230" fill="#2d4a2e"/>
+  <text x="350" y="240" font-family="sans-serif" font-size="14" fill="#3a3226">Upcoming</text>
+  <circle cx="330" cy="265" r="8" fill="none" stroke="#7a6a5a" stroke-width="2"/>
+  <text x="350" y="270" font-family="sans-serif" font-size="14" fill="#3a3226">Anytime</text>
+  <path d="M 322 290 L 338 290 L 330 302 Z" fill="#7a6a5a" opacity="0.5"/>
+  <text x="350" y="300" font-family="sans-serif" font-size="14" fill="#7a6a5a">Someday</text>
+  <!-- Divider -->
+  <line x1="310" y1="330" x2="490" y2="330" stroke="#d5cec3" stroke-width="1"/>
+  <!-- Projects -->
+  <text x="320" y="360" font-family="sans-serif" font-size="12" fill="#7a6a5a" opacity="0.7">PROJECTS</text>
+  <circle cx="330" cy="385" r="6" fill="#62c354"/>
+  <text x="350" y="390" font-family="sans-serif" font-size="13" fill="#3a3226">Work</text>
+  <circle cx="330" cy="415" r="6" fill="#f4be50"/>
+  <text x="350" y="420" font-family="sans-serif" font-size="13" fill="#3a3226">Personal</text>
+  <!-- Main content area -->
+  <text x="530" y="180" font-family="sans-serif" font-size="24" fill="#3a3226" font-weight="300">Today</text>
+  <!-- Elegant task items with checkboxes -->
+  <circle cx="530" cy="230" r="12" fill="none" stroke="#c4b5a0" stroke-width="2"/>
+  <text x="555" y="236" font-family="sans-serif" font-size="16" fill="#3a3226">Morning meeting prep</text>
+  <circle cx="530" cy="280" r="12" fill="none" stroke="#c4b5a0" stroke-width="2"/>
+  <text x="555" y="286" font-family="sans-serif" font-size="16" fill="#3a3226">Review design mockups</text>
+  <circle cx="530" cy="330" r="12" fill="#2d4a2e"/>
+  <path d="M 524 330 L 528 334 L 536 324" fill="none" stroke="#fffdf8" stroke-width="2.5"/>
+  <text x="555" y="336" font-family="sans-serif" font-size="16" fill="#7a6a5a" opacity="0.5">Send weekly update</text>
+  <!-- Subtle this evening section -->
+  <text x="530" y="385" font-family="sans-serif" font-size="14" fill="#7a6a5a" opacity="0.6">THIS EVENING</text>
+  <circle cx="530" cy="420" r="12" fill="none" stroke="#c4b5a0" stroke-width="2"/>
+  <text x="555" y="426" font-family="sans-serif" font-size="16" fill="#3a3226">Plan tomorrow</text>
+  <!-- Minimalist decoration -->
+  <circle cx="950" cy="300" r="80" fill="none" stroke="#c69c3f" stroke-width="1" opacity="0.3"/>
+  <circle cx="950" cy="300" r="60" fill="none" stroke="#c69c3f" stroke-width="1" opacity="0.3"/>
+</svg>

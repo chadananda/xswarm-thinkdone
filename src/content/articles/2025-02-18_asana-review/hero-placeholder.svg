@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="600" viewBox="0 0 1400 600">
+  <rect fill="#f4efe6" width="1400" height="600"/>
+  <!-- Browser window -->
+  <rect fill="#fffdf8" x="200" y="80" width="1000" height="440" rx="8" stroke="#c4b5a0" stroke-width="2"/>
+  <!-- Address bar -->
+  <rect fill="#f8f6f4" x="200" y="80" width="1000" height="35" rx="8"/>
+  <circle cx="220" cy="97" r="6" fill="#e85d4a"/>
+  <circle cx="240" cy="97" r="6" fill="#f4be50"/>
+  <circle cx="260" cy="97" r="6" fill="#62c354"/>
+  <!-- Gantt chart timeline header -->
+  <text x="220" y="155" font-family="sans-serif" font-size="12" fill="#7a6a5a" opacity="0.7">TASKS</text>
+  <text x="550" y="155" font-family="sans-serif" font-size="12" fill="#7a6a5a" opacity="0.7">JAN</text>
+  <text x="730" y="155" font-family="sans-serif" font-size="12" fill="#7a6a5a" opacity="0.7">FEB</text>
+  <text x="910" y="155" font-family="sans-serif" font-size="12" fill="#7a6a5a" opacity="0.7">MAR</text>
+  <text x="1090" y="155" font-family="sans-serif" font-size="12" fill="#7a6a5a" opacity="0.7">APR</text>
+  <!-- Timeline grid -->
+  <line x1="520" y1="140" x2="520" y2="500" stroke="#d5cec3" stroke-width="1"/>
+  <line x1="700" y1="140" x2="700" y2="500" stroke="#d5cec3" stroke-width="1"/>
+  <line x1="880" y1="140" x2="880" y2="500" stroke="#d5cec3" stroke-width="1"/>
+  <line x1="1060" y1="140" x2="1060" y2="500" stroke="#d5cec3" stroke-width="1"/>
+  <!-- Task rows with bars -->
+  <text x="220" y="195" font-family="sans-serif" font-size="13" fill="#3a3226">Planning Phase</text>
+  <rect fill="#7289da" opacity="0.7" x="540" y="180" width="140" height="20" rx="3"/>
+  <text x="220" y="235" font-family="sans-serif" font-size="13" fill="#3a3226">Design Sprint</text>
+  <rect fill="#f47373" opacity="0.7" x="660" y="220" width="160" height="20" rx="3"/>
+  <text x="220" y="275" font-family="sans-serif" font-size="13" fill="#3a3226">Development</text>
+  <rect fill="#43b581" opacity="0.7" x="800" y="260" width="220" height="20" rx="3"/>
+  <text x="220" y="315" font-family="sans-serif" font-size="13" fill="#3a3226">Testing</text>
+  <rect fill="#faa61a" opacity="0.7" x="980" y="300" width="120" height="20" rx="3"/>
+  <text x="220" y="355" font-family="sans-serif" font-size="13" fill="#3a3226">Launch Prep</text>
+  <rect fill="#c69c3f" opacity="0.7" x="1060" y="340" width="100" height="20" rx="3"/>
+  <!-- Dependencies -->
+  <line x1="680" y1="190" x2="720" y2="190" stroke="#7a6a5a" stroke-width="2" stroke-dasharray="4,3"/>
+  <line x1="720" y1="190" x2="720" y2="230" stroke="#7a6a5a" stroke-width="2" stroke-dasharray="4,3"/>
+  <line x1="720" y1="230" x2="660" y2="230" stroke="#7a6a5a" stroke-width="2" stroke-dasharray="4,3"/>
+  <circle cx="660" cy="230" r="4" fill="#7a6a5a"/>
+  <!-- Asana logo dots -->
+  <circle cx="1100" cy="450" r="25" fill="#f47373"/>
+  <circle cx="1150" cy="420" r="25" fill="#faa61a"/>
+  <circle cx="1150" cy="480" r="25" fill="#7289da"/>
+  <!-- Today marker -->
+  <line x1="880" y1="140" x2="880" y2="500" stroke="#e44232" stroke-width="3" opacity="0.5"/>
+  <text x="880" y="135" font-family="sans-serif" font-size="11" fill="#e44232" text-anchor="middle" font-weight="bold">TODAY</text>
+</svg>

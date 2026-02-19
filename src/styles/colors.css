@@ -1,0 +1,78 @@
+/*
+ * ThinkDone Color System
+ *
+ * Single source of truth for all colors.
+ * Uses light-dark() so dark mode works by setting:
+ *   :root { color-scheme: dark; }
+ *
+ * Dark values are initial estimates — refine when designing dark mode.
+ */
+
+:root {
+  color-scheme: light;
+}
+
+@theme {
+  /* ── Paper / background ── */
+  --color-paper:        light-dark(#f4efe6, #1c1917);
+  --color-paper-bright: light-dark(#fffdf8, #292524);
+  --color-warm:         light-dark(#f7f5f0, #252220);
+
+  /* ── Ink / text ── */
+  --color-ink:       light-dark(#3a3226, #e7e5e4);
+  --color-ink-light: light-dark(#6b5c4d, #a8a29e);   /* ~5:1 on paper — passes WCAG AA */
+  --color-ink-muted: light-dark(#8a7b6a, #78716c);   /* ~3.3:1 on paper — passes AA large text */
+  --color-ink-faint: light-dark(#c4b5a0, #44403c);   /* borders/dividers only — never for text */
+
+  /* ── Structural lines ── */
+  --color-rule:   light-dark(#d5cec3, #3a3532);
+  --color-margin: light-dark(#e8c4c4, #4a3030);
+
+  /* ── Brand / accent ── */
+  --color-accent: light-dark(#8b4513, #c2793e);
+  --color-gold:   light-dark(#b8860b, #d4a544);
+
+  /* ── Status ── */
+  --color-check:   light-dark(#88aa77, #88aa77);
+  --color-success: light-dark(#6a8a5a, #7da06a);
+  --color-danger:  light-dark(#bb4444, #dc6666);
+  --color-done:    light-dark(#b0a898, #5c574f);
+
+  /* ── Semantic badges ── */
+  --color-success-bg: light-dark(#e4f0de, #1e2e1a);
+  --color-success-fg: light-dark(#2e6a2e, #7bc47b);
+  --color-info-bg:    light-dark(#dde8f4, #1a2433);
+  --color-info-fg:    light-dark(#1a5aa0, #6aaae0);
+  --color-warn-bg:    light-dark(#fff3e0, #332510);
+  --color-warn-fg:    light-dark(#c05800, #e0a050);
+  --color-purple-bg:  light-dark(#ede0f5, #2a1a33);
+  --color-purple-fg:  light-dark(#6a30a0, #b080e0);
+  --color-danger-bg:  light-dark(#f5e0e0, #3a2020);
+  --color-danger-fg:  light-dark(#a03030, #e07070);
+
+  /* ── Meeting phases ── */
+  --color-phase-reflect: light-dark(#4a7fb5, #5a8fc5);
+  --color-phase-orient:  light-dark(#5a9e4a, #6aae5a);
+  --color-phase-decide:  light-dark(#c4882e, #d4983e);
+  --color-phase-create:  light-dark(#8a4ab5, #9a5ac5);
+  --color-phase-commit:  light-dark(#c45a3a, #d46a4a);
+
+  /* ── Misc ── */
+  --color-purple: light-dark(#6a5acd, #8b7cf0);
+  --color-tag-bg: light-dark(oklch(0.7 0.03 70 / 0.15), oklch(0.3 0.03 70 / 0.25));
+  --color-hover:  light-dark(oklch(0.7 0.03 60 / 0.10), oklch(0.3 0.03 60 / 0.15));
+  --color-grid:   light-dark(oklch(0.78 0.02 70 / 0.40), oklch(0.3 0.02 70 / 0.25));
+
+  /* ── Settings premium surfaces ── */
+  --color-card-shadow:    light-dark(rgba(139, 69, 19, 0.06), rgba(0, 0, 0, 0.3));
+  --color-card-shadow-lg: light-dark(rgba(139, 69, 19, 0.10), rgba(0, 0, 0, 0.4));
+  --color-card-glow:      light-dark(rgba(255, 253, 248, 0.6), rgba(41, 37, 36, 0.4));
+  --color-gold-glow:      light-dark(rgba(184, 134, 11, 0.12), rgba(212, 165, 68, 0.15));
+
+  /* ── Dark sections (landing, CTA, footers) ── */
+  /* These are intentionally dark in both modes */
+  --color-forest-dark:    #0f1f18;
+  --color-forest-darkest: #0a1610;
+  --color-forest:         light-dark(#3a6b4e, #4a8b6e);
+  --color-sage:           light-dark(#5a9a70, #6ab080);
+}

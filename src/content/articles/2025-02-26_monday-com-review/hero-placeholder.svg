@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="600" viewBox="0 0 1400 600">
+  <rect fill="#f4efe6" width="1400" height="600"/>
+  <!-- Browser window -->
+  <rect fill="#fffdf8" x="150" y="80" width="1100" height="440" rx="8" stroke="#c4b5a0" stroke-width="2"/>
+  <!-- Top bar -->
+  <rect fill="#ff3d57" x="150" y="80" width="1100" height="45" rx="8"/>
+  <circle cx="170" cy="102" r="6" fill="#fffdf8"/>
+  <circle cx="190" cy="102" r="6" fill="#fffdf8"/>
+  <circle cx="210" cy="102" r="6" fill="#fffdf8"/>
+  <text x="700" y="108" font-family="sans-serif" font-size="20" fill="#fffdf8" text-anchor="middle" font-weight="bold">monday.com - Work OS</text>
+  <!-- Colorful board/table -->
+  <text x="180" y="165" font-family="sans-serif" font-size="22" fill="#3a3226" font-weight="bold">Q1 Product Launch</text>
+  <!-- Column headers with colors -->
+  <rect fill="#f8f6f4" x="170" y="185" width="200" height="35" rx="4"/>
+  <text x="270" y="207" font-family="sans-serif" font-size="13" fill="#3a3226" text-anchor="middle" font-weight="bold">Task</text>
+  <rect fill="#ffadad" opacity="0.3" x="380" y="185" width="150" height="35" rx="4"/>
+  <text x="455" y="207" font-family="sans-serif" font-size="13" fill="#3a3226" text-anchor="middle" font-weight="bold">Owner</text>
+  <rect fill="#ffd6a5" opacity="0.3" x="540" y="185" width="150" height="35" rx="4"/>
+  <text x="615" y="207" font-family="sans-serif" font-size="13" fill="#3a3226" text-anchor="middle" font-weight="bold">Status</text>
+  <rect fill="#caffbf" opacity="0.3" x="700" y="185" width="150" height="35" rx="4"/>
+  <text x="775" y="207" font-family="sans-serif" font-size="13" fill="#3a3226" text-anchor="middle" font-weight="bold">Timeline</text>
+  <rect fill="#9bf6ff" opacity="0.3" x="860" y="185" width="150" height="35" rx="4"/>
+  <text x="935" y="207" font-family="sans-serif" font-size="13" fill="#3a3226" text-anchor="middle" font-weight="bold">Priority</text>
+  <rect fill="#bdb2ff" opacity="0.3" x="1020" y="185" width="150" height="35" rx="4"/>
+  <text x="1095" y="207" font-family="sans-serif" font-size="13" fill="#3a3226" text-anchor="middle" font-weight="bold">Budget</text>
+  <!-- Row 1 -->
+  <rect fill="#fffdf8" x="170" y="230" width="1000" height="50" stroke="#e8e8e8" stroke-width="1"/>
+  <text x="180" y="258" font-family="sans-serif" font-size="14" fill="#3a3226">Market research</text>
+  <circle cx="455" cy="255" r="16" fill="#ff6b9d"/>
+  <text x="455" y="260" font-family="sans-serif" font-size="12" fill="#fffdf8" text-anchor="middle" font-weight="bold">JD</text>
+  <rect fill="#00c875" x="550" y="242" width="130" height="26" rx="13"/>
+  <text x="615" y="260" font-family="sans-serif" font-size="12" fill="#fffdf8" text-anchor="middle" font-weight="bold">Done</text>
+  <rect fill="#579bfc" opacity="0.3" x="710" y="245" width="130" height="20" rx="3"/>
+  <circle cx="875" cy="255" r="8" fill="#fdab3d"/>
+  <text x="945" y="258" font-family="sans-serif" font-size="13" fill="#3a3226">$5,000</text>
+  <!-- Row 2 -->
+  <rect fill="#fffdf8" x="170" y="285" width="1000" height="50" stroke="#e8e8e8" stroke-width="1"/>
+  <text x="180" y="313" font-family="sans-serif" font-size="14" fill="#3a3226">Design prototype</text>
+  <circle cx="455" cy="310" r="16" fill="#a25ddc"/>
+  <text x="455" y="315" font-family="sans-serif" font-size="12" fill="#fffdf8" text-anchor="middle" font-weight="bold">SK</text>
+  <rect fill="#fdab3d" x="550" y="297" width="130" height="26" rx="13"/>
+  <text x="615" y="315" font-family="sans-serif" font-size="12" fill="#fffdf8" text-anchor="middle" font-weight="bold">Working on it</text>
+  <rect fill="#579bfc" opacity="0.3" x="710" y="300" width="100" height="20" rx="3"/>
+  <circle cx="875" cy="310" r="8" fill="#e2445c"/>
+  <text x="945" y="313" font-family="sans-serif" font-size="13" fill="#3a3226">$8,500</text>
+  <!-- Row 3 -->
+  <rect fill="#fffdf8" x="170" y="340" width="1000" height="50" stroke="#e8e8e8" stroke-width="1"/>
+  <text x="180" y="368" font-family="sans-serif" font-size="14" fill="#3a3226">Build MVP</text>
+  <circle cx="455" cy="365" r="16" fill="#00d647"/>
+  <text x="455" y="370" font-family="sans-serif" font-size="12" fill="#fffdf8" text-anchor="middle" font-weight="bold">MC</text>
+  <rect fill="#c4c4c4" x="550" y="352" width="130" height="26" rx="13"/>
+  <text x="615" y="370" font-family="sans-serif" font-size="12" fill="#fffdf8" text-anchor="middle" font-weight="bold">Stuck</text>
+  <rect fill="#579bfc" opacity="0.3" x="710" y="355" width="80" height="20" rx="3"/>
+  <circle cx="875" cy="365" r="8" fill="#e2445c"/>
+  <text x="945" y="368" font-family="sans-serif" font-size="13" fill="#3a3226">$12,000</text>
+  <!-- Row 4 -->
+  <rect fill="#fffdf8" x="170" y="395" width="1000" height="50" stroke="#e8e8e8" stroke-width="1"/>
+  <text x="180" y="423" font-family="sans-serif" font-size="14" fill="#3a3226">Beta testing</text>
+  <circle cx="455" cy="420" r="16" fill="#ff6b9d"/>
+  <text x="455" y="425" font-family="sans-serif" font-size="12" fill="#fffdf8" text-anchor="middle" font-weight="bold">JD</text>
+  <rect fill="#e2445c" opacity="0.3" x="550" y="407" width="130" height="26" rx="13"/>
+  <text x="615" y="425" font-family="sans-serif" font-size="12" fill="#7a6a5a" text-anchor="middle">Not started</text>
+  <rect fill="#579bfc" opacity="0.1" x="710" y="410" width="60" height="20" rx="3"/>
+  <circle cx="875" cy="420" r="8" fill="#fdab3d"/>
+  <text x="945" y="423" font-family="sans-serif" font-size="13" fill="#3a3226">$3,500</text>
+  <!-- Row 5 -->
+  <rect fill="#fffdf8" x="170" y="450" width="1000" height="50" stroke="#e8e8e8" stroke-width="1"/>
+  <text x="180" y="478" font-family="sans-serif" font-size="14" fill="#3a3226">Launch event</text>
+  <circle cx="455" cy="475" r="16" fill="#a25ddc"/>
+  <text x="455" y="480" font-family="sans-serif" font-size="12" fill="#fffdf8" text-anchor="middle" font-weight="bold">SK</text>
+  <rect fill="#e2445c" opacity="0.3" x="550" y="462" width="130" height="26" rx="13"/>
+  <text x="615" y="480" font-family="sans-serif" font-size="12" fill="#7a6a5a" text-anchor="middle">Not started</text>
+  <rect fill="#579bfc" opacity="0.1" x="710" y="465" width="40" height="20" rx="3"/>
+  <circle cx="875" cy="475" r="8" fill="#00c875"/>
+  <text x="945" y="478" font-family="sans-serif" font-size="13" fill="#3a3226">$2,000</text>
+  <!-- Add item button -->
+  <text x="180" y="173" font-family="sans-serif" font-size="13" fill="#579bfc">+ Add item</text>
+</svg>

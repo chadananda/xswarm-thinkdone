@@ -1,0 +1,6 @@
+---
+interface Props { src: string; alt: string; width?: number; height?: number; class?: string; }
+import { imgUrl } from '../../lib/imgix';
+const { src, alt, width, height, class: cls } = Astro.props;
+---
+<img src={imgUrl(src)} alt={alt} width={width} height={height} class:list={['rounded-lg border border-ink-faint shadow-sm', cls]} loading="lazy" decoding="async" />

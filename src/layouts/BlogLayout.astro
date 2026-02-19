@@ -1,0 +1,260 @@
+---
+export const prerender = true;
+import BaseLayout from './BaseLayout.astro';
+import '../styles/blog.css';
+import SiteNav from '../components/SiteNav.astro';
+import AudioPlayer from '../components/blog/AudioPlayer.svelte';
+import TranslationBar from '../components/blog/TranslationBar.astro';
+import CustomAuthorBio from '../components/blog/CustomAuthorBio.astro';
+import FaqSection from '../components/blog/FaqSection.astro';
+import SimilarArticles from '../components/blog/SimilarArticles.astro';
+import RelatedArticles from '../components/blog/RelatedArticles.astro';
+import { imgUrl, imgSrcset } from '../lib/imgix';
+interface Props {
+  title: string;
+  description: string;
+  author?: string;
+  authorAvatar?: string;
+  publishedAt?: Date;
+  readingTime?: string;
+  heroImage?: string;
+  heroCaption?: string;
+  heroCredit?: string;
+  ogImage?: string;
+  headings?: Array<{ depth: number; slug: string; text: string }>;
+  audio?: string;
+  audioDuration?: string;
+  translations?: Array<{ locale: string; slug: string }>;
+  currentLocale?: string;
+  customBio?: string;
+  customBioAuthorName?: string;
+  customBioAuthorAvatar?: string;
+  customBioAuthorSocial?: { twitter?: string; linkedin?: string; website?: string };
+  faq?: Array<{ q: string; a: string }>;
+  similarArticles?: Array<{ title: string; heroImage?: string; slug: string; readingTime?: string }>;
+}
+const {
+  title, description, author, authorAvatar, publishedAt, readingTime,
+  heroImage, heroCaption, heroCredit, ogImage, headings = [],
+  audio, audioDuration,
+  translations, currentLocale = 'en',
+  customBio, customBioAuthorName, customBioAuthorAvatar, customBioAuthorSocial,
+  faq, similarArticles = [],
+} = Astro.props;
+const dateStr = publishedAt ? new Date(publishedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '';
+const tocHeadings = headings.filter(h => h.depth === 2 || h.depth === 3);
+const heroParams = { w: 1600, h: 900, fit: 'crop' };
+const heroSrc = heroImage ? imgUrl(heroImage, heroParams) : '';
+const heroSrcset = heroImage ? imgSrcset(heroImage, heroParams, [640, 1024, 1600]) : '';
+---
+<BaseLayout title={`${title} | ThinkDone Blog`} description={description} ogImage={ogImage} ogType="article">
+  <!-- Reading Progress Bar -->
+  <div class="blog-progress-bar" id="blog-progress"></div>
+  <!-- Blog Nav -->
+  <SiteNav solid links={[
+    { href: '/articles', label: 'Articles' },
+    { href: '/#pricing', label: 'Pricing' },
+  ]} />
+  <!-- Immersive Full-Bleed Hero -->
+  {heroImage ? (
+    <div class="blog-hero-fullbleed" id="blog-hero">
+      <img src={heroSrc} srcset={heroSrcset} sizes="100vw" width="1600" height="900" alt={title} loading="eager" decoding="async" id="blog-hero-img" />
+      <div class="blog-hero-overlay">
+        <h1>{title}</h1>
+        <div class="blog-hero-meta">
+          {authorAvatar && <img src={imgUrl(authorAvatar, { w: 72, h: 72, fit: 'facearea', facepad: 2 })} width="36" height="36" alt={author || ''} />}
+          {author && <span>{author}</span>}
+          {dateStr && <><span>&middot;</span><time>{dateStr}</time></>}
+          {readingTime && <><span>&middot;</span><span>{readingTime}</span></>}
+        </div>
+        {(heroCaption || heroCredit) && (
+          <p style="font-size:0.75rem;color:rgba(255,255,255,0.5);margin:0.5rem 0 0;">
+            {heroCaption}{heroCredit && <span> &mdash; {heroCredit}</span>}
+          </p>
+        )}
+      </div>
+    </div>
+  ) : (
+    <div style="height:4rem;"></div>
+  )}
+  <!-- Main Content -->
+  <div class="blog-graph-bg min-h-screen" style="border-left: 3px solid var(--color-margin);">
+    <div class="max-w-7xl mx-auto px-6 py-8">
+      {translations && translations.length > 0 && (
+        <div class="max-w-[680px] mx-auto">
+          <TranslationBar translations={translations} currentLocale={currentLocale} />
+        </div>
+      )}
+      <!-- TLDR / Abstract -->
+      {description && (
+        <div class="blog-tldr max-w-[680px] mx-auto">
+          <div class="flex items-center gap-2 mb-3">
+            <span class="font-mono text-xs font-bold tracking-widest uppercase" style="color:var(--color-gold)">TL;DR</span>
+            <div class="flex-1 h-px" style="background:var(--color-rule)"></div>
+          </div>
+          <p class="font-hand text-lg leading-relaxed m-0" style="color:var(--color-ink-light)">{description}</p>
+        </div>
+      )}
+      <!-- Article Header (no-hero fallback) -->
+      {!heroImage && (
+        <header class="article-header">
+          <h1 class="font-display font-bold text-forest-dark mb-4" style="font-size:clamp(2rem,5vw,3.5rem);line-height:1.15">
+            {title}
+          </h1>
+          <div class="article-meta">
+            {author && <span class="font-medium">{author}</span>}
+            {dateStr && <><span class="article-meta-dot"></span><time>{dateStr}</time></>}
+            {readingTime && <><span class="article-meta-dot"></span><span>{readingTime}</span></>}
+          </div>
+        </header>
+      )}
+      {audio && (
+        <div class="max-w-[680px] mx-auto">
+          <AudioPlayer src={audio} duration={audioDuration || ''} client:visible />
+        </div>
+      )}
+      <!-- Two-column: content + TOC -->
+      <div class="flex gap-12">
+        <main class="flex-1 min-w-0">
+          <article class="blog-prose" id="blog-article">
+            <slot />
+          </article>
+          <div class="max-w-[680px] mx-auto">
+            {customBio && customBioAuthorName && (
+              <CustomAuthorBio
+                name={customBioAuthorName}
+                avatar={customBioAuthorAvatar || ''}
+                bio={customBio}
+                social={customBioAuthorSocial}
+              />
+            )}
+            {faq && faq.length > 0 && (
+              <FaqSection items={faq} />
+            )}
+          </div>
+        </main>
+        {tocHeadings.length > 0 && (
+          <aside class="hidden lg:block w-56 shrink-0">
+            <nav class="blog-toc" id="blog-toc">
+              <p class="blog-toc-title">On this page</p>
+              {tocHeadings.map(h => (
+                <a href={`#${h.slug}`} class={h.depth === 3 ? 'depth-3' : ''} data-toc-slug={h.slug}>{h.text}</a>
+              ))}
+              {similarArticles.length > 0 && (
+                <SimilarArticles articles={similarArticles} />
+              )}
+            </nav>
+          </aside>
+        )}
+      </div>
+    </div>
+  </div>
+  <!-- Blog Footer -->
+  <footer class="blog-footer">
+    <div class="blog-footer-inner">
+      <div class="flex items-center gap-2">
+        <img src="/favicon.png" alt="" width="24" height="24" class="rounded">
+        <span class="font-display font-bold text-paper">Think<span style="opacity:0.35">-</span><span class="text-gold">Done</span><span class="text-paper/40">.ai</span></span>
+        <span class="font-display italic text-paper/50 ml-2">"Done is the engine of more."</span>
+      </div>
+      <div class="font-ui text-sm text-paper/50">
+        from <a href="https://xswarm.ai" class="text-gold hover:text-paper transition-colors" target="_blank" rel="noopener">xSwarm.ai</a>
+      </div>
+    </div>
+  </footer>
+  <!-- Orchestrator Script -->
+  <script>
+    (() => {
+      const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const article = document.getElementById('blog-article');
+      const progressBar = document.getElementById('blog-progress');
+      const heroImg = document.getElementById('blog-hero-img');
+      if (prefersReduced) {
+        // Make all reveals instantly visible
+        document.querySelectorAll('.blog-reveal').forEach(el => el.classList.add('visible'));
+        return; // Skip all animation setup
+      }
+      // 1. Add .blog-reveal to h2 headings in article
+      if (article) {
+        article.querySelectorAll(':scope > h2').forEach(h2 => {
+          h2.classList.add('blog-reveal');
+        });
+      }
+      // 2. IntersectionObserver for .blog-reveal (fire-once)
+      const revealObs = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            const el = entry.target;
+            const delay = parseInt(el.dataset.revealDelay || '0', 10);
+            if (delay > 0) {
+              setTimeout(() => el.classList.add('visible'), delay);
+            } else {
+              el.classList.add('visible');
+            }
+            revealObs.unobserve(el);
+          }
+        });
+      }, { threshold: 0.15 });
+      document.querySelectorAll('.blog-reveal').forEach(el => revealObs.observe(el));
+      // 3. Counter animation for [data-counter] elements
+      const counterObs = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+          const el = entry.target;
+          counterObs.unobserve(el);
+          const target = parseFloat(el.dataset.counter);
+          const suffix = el.dataset.counterSuffix || '';
+          const isFloat = el.dataset.counter.includes('.');
+          const duration = 1500;
+          const start = performance.now();
+          const ease = (t) => 1 - Math.pow(1 - t, 3); // ease-out cubic
+          const tick = (now) => {
+            const elapsed = Math.min((now - start) / duration, 1);
+            const val = ease(elapsed) * target;
+            el.textContent = (isFloat ? val.toFixed(1) : Math.round(val)) + suffix;
+            if (elapsed < 1) requestAnimationFrame(tick);
+          };
+          el.textContent = '0' + suffix;
+          requestAnimationFrame(tick);
+        });
+      }, { threshold: 0.5 });
+      document.querySelectorAll('[data-counter]').forEach(el => counterObs.observe(el));
+      // 4. Scroll handler: progress bar + parallax + TOC highlight
+      let ticking = false;
+      const tocLinks = document.querySelectorAll('#blog-toc a[data-toc-slug]');
+      const sectionHeadings = article ? Array.from(article.querySelectorAll(':scope > h2[id], :scope > h3[id]')) : [];
+      const onScroll = () => {
+        if (ticking) return;
+        ticking = true;
+        requestAnimationFrame(() => {
+          const scrollY = window.scrollY;
+          const docH = document.documentElement.scrollHeight - window.innerHeight;
+          // Progress bar
+          if (progressBar && docH > 0) {
+            progressBar.style.width = Math.min(100, (scrollY / docH) * 100) + '%';
+          }
+          // Parallax hero
+          if (heroImg) {
+            heroImg.style.transform = 'translateY(' + (scrollY * 0.25) + 'px)';
+          }
+          // TOC highlight
+          if (tocLinks.length > 0 && sectionHeadings.length > 0) {
+            let activeSlug = '';
+            for (let i = sectionHeadings.length - 1; i >= 0; i--) {
+              if (sectionHeadings[i].getBoundingClientRect().top <= 120) {
+                activeSlug = sectionHeadings[i].id;
+                break;
+              }
+            }
+            tocLinks.forEach(a => {
+              a.classList.toggle('active', a.dataset.tocSlug === activeSlug);
+            });
+          }
+          ticking = false;
+        });
+      };
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll(); // initial
+    })();
+  </script>
+</BaseLayout>

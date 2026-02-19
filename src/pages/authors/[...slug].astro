@@ -1,0 +1,47 @@
+---
+import { getCollection, getEntry } from 'astro:content';
+import AuthorLayout from '../../layouts/AuthorLayout.astro';
+import ArticleCard from '../../components/blog/ArticleCard.astro';
+//
+export async function getStaticPaths() {
+  const authors = await getCollection('authors');
+  return authors.map(entry => ({ params: { slug: entry.id }, props: { entry } }));
+}
+//
+const { entry } = Astro.props;
+const { name, role, bio, longBio, avatar, expertise, social, sales } = entry.data;
+//
+const allArticles = await getCollection('articles', ({ data }) => !data.draft);
+const authorArticles = allArticles
+  .filter(a => a.data.author === entry.id)
+  .sort((a, b) => new Date(b.data.publishedAt).getTime() - new Date(a.data.publishedAt).getTime());
+//
+const articleCards = await Promise.all(authorArticles.map(async (a) => {
+  const authorEntry = await getEntry('authors', a.data.author);
+  const authorData = authorEntry ? { name: authorEntry.data.name, avatar: authorEntry.data.avatar } : { name: a.data.author, avatar: '' };
+  return {
+    title: a.data.title,
+    description: a.data.description,
+    type: a.data.type,
+    heroImage: a.data.heroImage,
+    author: authorData,
+    publishedAt: a.data.publishedAt.toISOString(),
+    readingTime: a.data.readingTime,
+    slug: a.id,
+  };
+}));
+---
+<AuthorLayout name={name} role={role} bio={bio} longBio={longBio} avatar={avatar} expertise={expertise} social={social} sales={sales}>
+  {articleCards.length > 0 && (
+    <section class="au-section bg-warm">
+      <div class="max-w-6xl mx-auto px-6">
+        <div class="text-center mb-8">
+          <h2 class="font-display font-bold text-3xl text-forest-dark mb-2">Articles by {name}</h2>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {articleCards.map(article => <ArticleCard {...article} />)}
+        </div>
+      </div>
+    </section>
+  )}
+</AuthorLayout>

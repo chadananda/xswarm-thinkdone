@@ -1,0 +1,38 @@
+---
+import { getCollection, render } from 'astro:content';
+import StrategyLayout from '../../layouts/StrategyLayout.astro';
+import ShareMeta from '../../components/blog/ShareMeta.astro';
+//
+export async function getStaticPaths() {
+  const strategies = await getCollection('strategies');
+  return strategies.map(entry => ({ params: { slug: entry.id }, props: { entry } }));
+}
+//
+const { entry } = Astro.props;
+const { Content, headings } = await render(entry);
+const { name, type, tagline, description, icon, website, pricing, platforms, verdict, pros, cons, publishedAt } = entry.data;
+---
+<StrategyLayout
+  name={name}
+  type={type}
+  tagline={tagline}
+  description={description}
+  icon={icon}
+  website={website}
+  pricing={pricing}
+  platforms={platforms}
+  verdict={verdict}
+  pros={pros}
+  cons={cons}
+  publishedAt={publishedAt}
+  headings={headings}
+>
+  <ShareMeta
+    title={`${name} Review`}
+    description={description}
+    url={`/strategies/${entry.id}`}
+    type="article"
+    publishedAt={publishedAt.toISOString()}
+  />
+  <Content />
+</StrategyLayout>

@@ -1,239 +1,856 @@
 ---
 import '../styles/global.css';
-import TodoList from '../components/TodoList.svelte';
+import SiteNav from '../components/SiteNav.astro';
+import GoogleOneTap from '../components/GoogleOneTap.astro';
 ---
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#8b4513">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Think → Done</title>
-  <link rel="icon" type="image/png" href="/favicon.png">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ThinkDone — AI-Powered Daily Planning</title>
+  <meta name="description" content="All the thinking happens before your day begins. 15-minute AI planning meeting, one clean list, then just work.">
+  <meta property="og:title" content="ThinkDone — Your AI Chief of Staff">
+  <meta property="og:description" content="A 15-minute AI planning session every morning. One clean task list. Everything else handled.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="/icon-1024.png">
+  <meta name="theme-color" content="#0f1f18">
+  <link rel="canonical" href="https://think-done.com/">
+  <link rel="icon" type="image/png" href="/favicon-32.png" sizes="32x32">
+  <link rel="icon" type="image/png" href="/favicon.png" sizes="192x192">
   <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-  <link rel="manifest" href="/manifest.json">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Patrick+Hand&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="preload" href="/fonts/caveat-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/patrick-hand-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/ibm-plex-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
 </head>
-<body>
-  <div class="page">
-    <header class="brand">
-      <div class="brand-row">
-        <h1>Think <span class="arrow">&rarr;</span> Done</h1>
-        <div class="brand-right">
-          <span class="date" id="date"></span>
-          <button class="header-btn mic-btn" id="micBtn" title="Quick meeting">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
-          </button>
+<body class="landing-page">
+
+  <!-- NAVIGATION -->
+  <SiteNav links={[
+    { href: '#how-it-works', label: 'How It Works' },
+    { href: '#features', label: 'Features' },
+    { href: '#pricing', label: 'Pricing' },
+  ]} />
+
+  <!-- HERO -->
+  <section class="ln-hero">
+    <div class="ln-blob ln-blob-sage" style="width:500px;height:500px;top:10%;left:-10%"></div>
+    <div class="ln-blob ln-blob-gold" style="width:400px;height:400px;bottom:10%;right:-5%;animation-delay:-10s"></div>
+    <div class="ln-hero-glow"></div>
+    <div class="ln-hero-grid"></div>
+    <div class="relative z-10 max-w-4xl mx-auto px-6 text-center">
+      <img src="/favicon.png" alt="ThinkDone" class="ln-hero-icon" width="120" height="120">
+      <p class="font-mono text-gold text-xs tracking-widest uppercase mb-6">AI-Powered Daily Planning</p>
+      <h1 class="font-display font-bold text-paper leading-tight mb-6" style="font-size:clamp(2.8rem,7vw,5rem)">
+        All the thinking happens before your day begins.
+      </h1>
+      <p class="font-hand text-paper/65 text-lg md:text-xl max-w-[580px] mx-auto mb-4 leading-relaxed">
+        ThinkDone runs a 15-minute AI planning meeting every morning. It reads your projects, challenges your priorities, surfaces what's stuck &mdash; and hands you one clean list. Then it shuts up and lets you work.
+      </p>
+      <p class="font-display italic text-sage text-xl mb-10">
+        No more planning. Just doing.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center mb-8">
+        <a href="#pricing" class="ln-btn-gradient">Try It for a Buck</a>
+        <a href="#how-it-works" class="ln-btn-ghost">See How It Works</a>
+      </div>
+      <p class="font-ui text-paper/40 text-xs">
+        $1 to start &middot; AI usage billed separately &middot; Cancel anytime
+      </p>
+    </div>
+    <svg class="absolute bottom-0 left-0 w-full" viewBox="0 0 1440 120" preserveAspectRatio="none" style="height:120px">
+      <path d="M0,64 C240,96 480,96 720,64 C960,32 1200,32 1440,64 L1440,120 L0,120 Z" fill="var(--color-warm)"/>
+    </svg>
+  </section>
+
+  <!-- TWO PHASES -->
+  <section class="ln-section bg-warm">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="text-center mb-16 ln-reveal">
+        <h2 class="font-display font-bold text-5xl md:text-6xl text-forest-dark mb-4">
+          Two phases. One perfect day.
+        </h2>
+        <p class="font-hand text-xl text-ink-muted">The name is the product.</p>
+      </div>
+      <div class="ln-phases-grid">
+        <div class="ln-phase-card ln-reveal">
+          <div class="flex items-center gap-3 mb-4">
+            <svg class="w-10 h-10 text-forest" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+            </svg>
+            <h3 class="font-display font-bold text-4xl text-forest">Think</h3>
+          </div>
+          <p class="font-hand text-ink-light leading-relaxed mb-4">
+            Every morning, your AI chief of staff reads your entire world &mdash; every project, every commitment, every deadline. In a focused 15-minute conversation, it surfaces blockers, challenges your priorities, and builds your strategy for the day.
+          </p>
+          <p class="font-ui text-sm text-ink-muted italic">
+            Complex, strategic, intelligent &mdash; so you don't have to be.
+          </p>
+        </div>
+        <div class="flex justify-center items-center">
+          <span class="font-display text-7xl text-gold">&rarr;</span>
+        </div>
+        <div class="ln-phase-card ln-reveal">
+          <div class="flex items-center gap-3 mb-4">
+            <svg class="w-10 h-10 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+            <h3 class="font-display font-bold text-4xl text-accent">Done</h3>
+          </div>
+          <p class="font-hand text-ink-light leading-relaxed mb-4">
+            After your meeting, all that's left is a single, ordered list. No decisions to make. No priorities to juggle. Just start at the top and burn down. Check, check, check. That's it. That's the whole app.
+          </p>
+          <p class="font-ui text-sm text-ink-muted italic">
+            Deliberately simple. Satisfyingly clear.
+          </p>
         </div>
       </div>
-      <div class="quote" id="quote"></div>
-    </header>
-    <main>
-      <TodoList client:load />
-    </main>
-    <footer class="footer" id="ts"></footer>
-  </div>
+      <p class="text-center font-display italic text-2xl text-ink-muted mt-12 ln-reveal">
+        &ldquo;Done is the engine of more.&rdquo;
+      </p>
+    </div>
+  </section>
 
-  <button class="fab" id="addBtn" title="Add task">+</button>
+  <!-- THE MORNING MEETING -->
+  <section class="ln-section bg-paper ln-graph-bg">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="grid lg:grid-cols-2 gap-12 items-center">
+        <div class="ln-reveal">
+          <h2 class="font-display font-bold text-5xl md:text-6xl text-forest-dark mb-6">
+            15 minutes of strategic clarity.
+          </h2>
+          <p class="font-hand text-lg text-ink-light mb-8 leading-relaxed">
+            Your AI planning team loads your full landscape. Projects, commitments, past decisions, deadlines. Then it runs a focused session:
+          </p>
+          <ul class="space-y-4 mb-8">
+            <li class="flex items-start gap-3">
+              <svg class="w-6 h-6 text-success shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+              <span class="font-hand text-ink-light">Quick wins first &mdash; build momentum before deep work</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <svg class="w-6 h-6 text-success shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+              <span class="font-hand text-ink-light">Blockers surfaced &mdash; what's stuck? who's waiting?</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <svg class="w-6 h-6 text-success shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+              <span class="font-hand text-ink-light">Priorities challenged &mdash; are you working on the right things?</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <svg class="w-6 h-6 text-success shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+              <span class="font-hand text-ink-light">Projects rotated &mdash; nothing quietly stalls</span>
+            </li>
+            <li class="flex items-start gap-3">
+              <svg class="w-6 h-6 text-success shrink-0 mt-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+              <span class="font-hand text-ink-light">One ordered list &mdash; your entire output for the day</span>
+            </li>
+          </ul>
+          <blockquote class="border-l-4 border-forest pl-6 py-2">
+            <p class="font-display italic text-2xl text-ink-light">
+              The meeting ends. The list begins. Everything else fades away.
+            </p>
+          </blockquote>
+        </div>
+        <!-- PRODUCT MOCKUP -->
+        <div class="ln-reveal">
+          <div class="ln-mockup">
+            <div class="ln-mockup-margin"></div>
+            <div class="ln-mockup-inner">
+              <div class="flex items-center justify-between mb-2">
+                <div class="flex items-center gap-2">
+                  <img src="/favicon.png" alt="" width="24" height="24" class="rounded">
+                  <span class="font-display font-bold text-xl text-ink-light">Think<span style="opacity:0.35">-</span><span class="text-gold">Done</span></span>
+                </div>
+                <span class="font-ui text-xs text-ink-muted">Feb 9 &middot; 10:30 AM</span>
+              </div>
+              <p class="font-display italic text-sm text-ink-muted mb-4">&ldquo;Done is the engine of more.&rdquo;</p>
+              <!-- Completed tasks -->
+              <div class="ln-mock-task ln-mock-done">
+                <span class="ln-mock-check ln-mock-checked">&check;</span>
+                <span class="ln-mock-text line-through">Review Q1 budget proposal</span>
+                <span class="ln-mock-time">~15m</span>
+              </div>
+              <div class="ln-mock-task ln-mock-done">
+                <span class="ln-mock-check ln-mock-checked">&check;</span>
+                <span class="ln-mock-text line-through">Reply to Sarah's email</span>
+                <span class="ln-mock-time">~5m</span>
+              </div>
+              <!-- Active tasks -->
+              <div class="ln-mock-task">
+                <span class="ln-mock-check"></span>
+                <span class="ln-mock-text">Draft blog post outline</span>
+                <span class="ln-mock-time">~45m</span>
+                <span class="ln-mock-tag">blogwords</span>
+              </div>
+              <div class="ln-mock-task">
+                <span class="ln-mock-check"></span>
+                <span class="ln-mock-text">Update project roadmap</span>
+                <span class="ln-mock-time">~30m</span>
+                <span class="ln-mock-tag">thinkdone</span>
+              </div>
+              <div class="ln-mock-task">
+                <span class="ln-mock-check"></span>
+                <span class="ln-mock-text">Call contractor re: timeline</span>
+                <span class="ln-mock-time">~10m</span>
+                <span class="ln-mock-tag">ocean</span>
+              </div>
+              <div class="ln-mock-task">
+                <span class="ln-mock-check"></span>
+                <span class="ln-mock-text">Ship homepage redesign</span>
+                <span class="ln-mock-time">~1h</span>
+                <span class="ln-mock-tag">xswarm</span>
+              </div>
+              <!-- Day ends -->
+              <div class="ln-mock-dayend">&mdash; day ends here &mdash;</div>
+              <!-- Overflow -->
+              <div class="ln-mock-task ln-mock-overflow">
+                <span class="ln-mock-check"></span>
+                <span class="ln-mock-text">Research conference speakers</span>
+                <span class="ln-mock-time">~1h</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURES -->
+  <section id="features" class="ln-section bg-warm">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-16 ln-reveal">
+        <h2 class="font-display font-bold text-5xl md:text-6xl text-forest-dark mb-4">
+          Smart where it counts. Simple where you live.
+        </h2>
+        <p class="font-hand text-xl text-ink-muted">
+          All the intelligence is in the planning. The rest is just a clean list.
+        </p>
+      </div>
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div class="ln-feature-card ln-reveal">
+          <div class="ln-feature-icon">
+            <svg class="w-6 h-6 text-forest" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          </div>
+          <h3 class="font-display font-bold text-2xl text-forest-dark mb-3">Persistent Memory</h3>
+          <p class="font-hand text-ink-light leading-relaxed">
+            Remembers every decision, commitment, and pattern. Surfaces that promise you made three weeks ago. Notices when things keep getting deferred.
+          </p>
+        </div>
+        <div class="ln-feature-card ln-reveal">
+          <div class="ln-feature-icon">
+            <svg class="w-6 h-6 text-forest" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          </div>
+          <h3 class="font-display font-bold text-2xl text-forest-dark mb-3">GTD on Autopilot</h3>
+          <p class="font-hand text-ink-light leading-relaxed">
+            Quick wins positioned first for momentum. Blockers escalated. Priorities challenged every morning. You don't need to know GTD &mdash; it just works.
+          </p>
+        </div>
+        <div class="ln-feature-card ln-reveal">
+          <div class="ln-feature-icon">
+            <svg class="w-6 h-6 text-forest" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
+          </div>
+          <h3 class="font-display font-bold text-2xl text-forest-dark mb-3">Multi-Project Oversight</h3>
+          <p class="font-hand text-ink-light leading-relaxed">
+            Running 5 projects? 12? ThinkDone monitors them all. Rotates through each in your meetings. Surfaces the ones quietly stalling.
+          </p>
+        </div>
+        <div class="ln-feature-card ln-reveal">
+          <div class="ln-feature-icon">
+            <svg class="w-6 h-6 text-forest" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </div>
+          <h3 class="font-display font-bold text-2xl text-forest-dark mb-3">Smart Day Capacity</h3>
+          <p class="font-hand text-ink-light leading-relaxed">
+            Time estimates show where your day is full. The &lsquo;day ends here&rsquo; line prevents the optimistic overcommitment trap.
+          </p>
+        </div>
+        <div class="ln-feature-card ln-reveal">
+          <div class="ln-feature-icon">
+            <svg class="w-6 h-6 text-forest" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+          </div>
+          <h3 class="font-display font-bold text-2xl text-forest-dark mb-3">One Clean List</h3>
+          <p class="font-hand text-ink-light leading-relaxed">
+            No folders. No categories. No swim lanes. Just an ordered list where position equals priority. Drag to reorder. Check to complete.
+          </p>
+        </div>
+        <div class="ln-feature-card ln-reveal">
+          <div class="ln-feature-icon">
+            <svg class="w-6 h-6 text-forest" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+          </div>
+          <h3 class="font-display font-bold text-2xl text-forest-dark mb-3">Delegate to AI</h3>
+          <p class="font-hand text-ink-light leading-relaxed">
+            Connect to OpenClaw and hand off research, drafts, and scheduling to your AI assistant. Delegate the delegatable.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section id="how-it-works" class="ln-section bg-paper ln-graph-bg">
+    <div class="max-w-4xl mx-auto px-6">
+      <div class="text-center mb-16 ln-reveal">
+        <h2 class="font-display font-bold text-5xl md:text-6xl text-forest-dark mb-4">
+          Effortless by design.
+        </h2>
+      </div>
+      <div class="relative">
+        <div class="ln-steps-line"></div>
+        <div class="space-y-12">
+          <div class="relative pl-20 ln-reveal">
+            <div class="ln-step-num">1</div>
+            <h3 class="font-display font-bold text-3xl text-forest-dark mb-3">Tell ThinkDone about your world</h3>
+            <p class="font-hand text-ink-light text-lg leading-relaxed">
+              Add your projects, goals, and commitments. Plain text files &mdash; no proprietary formats, no migrations, no setup wizards.
+            </p>
+          </div>
+          <div class="relative pl-20 ln-reveal">
+            <div class="ln-step-num">2</div>
+            <h3 class="font-display font-bold text-3xl text-forest-dark mb-3">Have your morning meeting</h3>
+            <p class="font-hand text-ink-light text-lg leading-relaxed">
+              15 minutes. Your AI reads everything, challenges your thinking, builds your prioritized day. Then the meeting ends and you start working.
+            </p>
+          </div>
+          <div class="relative pl-20 ln-reveal">
+            <div class="ln-step-num">3</div>
+            <h3 class="font-display font-bold text-3xl text-forest-dark mb-3">Burn down your list</h3>
+            <p class="font-hand text-ink-light text-lg leading-relaxed">
+              One clean list. Start at the top. Check things off. Hear the applause. Feel the momentum. Done is the engine of more.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SOCIAL PROOF -->
+  <section class="py-20 bg-warm">
+    <div class="max-w-3xl mx-auto px-6 text-center ln-reveal">
+      <blockquote class="border-l-4 border-forest pl-8 py-4 text-left">
+        <p class="font-display italic text-3xl text-ink-light mb-4">
+          It's like having an executive assistant who never forgets anything and shows up every morning with a perfect plan &mdash; then disappears and lets you work.
+        </p>
+      </blockquote>
+      <p class="font-ui text-sm text-ink-muted mt-6">
+        Built by a founder running 12+ projects who got tired of planning apps that made him plan more.
+      </p>
+    </div>
+  </section>
+
+  <!-- PRICING -->
+  <section id="pricing" class="ln-section bg-warm">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="text-center mb-16 ln-reveal">
+        <h2 class="font-display font-bold text-5xl md:text-6xl text-forest-dark mb-4">
+          Simple pricing. Serious clarity.
+        </h2>
+        <p class="font-hand text-xl text-ink-muted">
+          Start small or go all in. Every plan includes your AI planning dashboard.
+        </p>
+      </div>
+      <div class="ln-price-grid">
+        <!-- STARTER -->
+        <div class="ln-price-card ln-reveal">
+          <h3 class="font-display font-bold text-3xl text-forest-dark mb-2">Starter</h3>
+          <div class="mb-2">
+            <span class="font-display font-bold text-5xl text-forest-dark">$5</span>
+            <span class="font-ui text-ink-muted">/month</span>
+          </div>
+          <p class="font-hand text-ink-muted mb-6">Pay-as-you-go AI. Perfect for trying it out.</p>
+          <ul class="ln-price-features">
+            <li>
+              <svg class="w-5 h-5 text-success shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+              <span>Interactive task dashboard</span>
+            </li>
+            <li>
+              <svg class="w-5 h-5 text-success shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+              <span>AI planning meetings (pay per use)</span>
+            </li>
+            <li>
+              <svg class="w-5 h-5 text-success shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+              <span>Basic memory system</span>
+            </li>
+            <li>
+              <svg class="w-5 h-5 text-success shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+              <span>Up to 3 projects</span>
+            </li>
+            <li>
+              <svg class="w-5 h-5 text-success shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+              <span>PWA &mdash; works on any device</span>
+            </li>
+          </ul>
+          <a href="#" class="ln-btn-outline">Get Started</a>
+        </div>
+        <!-- STANDARD -->
+        <div class="ln-price-card ln-reveal">
+          <h3 class="font-display font-bold text-3xl text-forest-dark mb-2">Standard</h3>
+          <div class="mb-2">
+            <span class="font-display font-bold text-5xl text-forest-dark">$27</span>
+            <span class="font-ui text-ink-muted">/month</span>
+          </div>
+          <p class="font-hand text-ink-muted mb-6">10 hours of AI planning. The daily driver.</p>
+          <ul class="ln-price-features">
+            <li>
+              <svg class="w-5 h-5 text-success shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+              <span><strong>10 hours</strong> AI planning per month</span>
+            </li>
+            <li>
+              <svg class="w-5 h-5 text-success shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+              <span>Persistent memory system</span>
+            </li>
+            <li>
+              <svg class="w-5 h-5 text-success shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+              <span>Unlimited projects</span>
+            </li>
+            <li>
+              <svg class="w-5 h-5 text-success shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+              <span>Multi-project tracking</span>
+            </li>
+            <li>
+              <svg class="w-5 h-5 text-success shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+              <span>GTD methodology built in</span>
+            </li>
+          </ul>
+          <a href="#" class="ln-btn-outline">Try It for a Buck</a>
+        </div>
+        <!-- PRO -->
+        <div class="ln-price-card ln-price-pro ln-reveal">
+          <div class="ln-price-badge">Most Popular</div>
+          <h3 class="font-display font-bold text-3xl text-forest-dark mb-2">Pro</h3>
+          <div class="mb-2">
+            <span class="font-display font-bold text-5xl text-forest-dark">$45</span>
+            <span class="font-ui text-ink-muted">/month</span>
+          </div>
+          <p class="font-hand text-ink-muted mb-6">40 hours of AI. For power users who delegate.</p>
+          <ul class="ln-price-features">
+            <li>
+              <svg class="w-5 h-5 text-success shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+              <span><strong>40 hours</strong> AI planning per month</span>
+            </li>
+            <li>
+              <svg class="w-5 h-5 text-success shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+              <span>Everything in Standard, plus:</span>
+            </li>
+            <li>
+              <svg class="w-5 h-5 text-success shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+              <span>OpenClaw integration</span>
+            </li>
+            <li>
+              <svg class="w-5 h-5 text-success shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+              <span>Automation connectors</span>
+            </li>
+            <li>
+              <svg class="w-5 h-5 text-success shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+              <span>Priority support</span>
+            </li>
+            <li>
+              <svg class="w-5 h-5 text-success shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+              <span>Calendar &amp; email sync</span>
+            </li>
+          </ul>
+          <a href="#" class="ln-btn-gradient ln-btn-block">Try It for a Buck</a>
+        </div>
+      </div>
+      <div class="text-center mt-8 ln-reveal">
+        <div class="flex items-center justify-center gap-2 text-ink-muted">
+          <svg class="w-5 h-5 text-success" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+          <p class="font-ui text-sm">
+            No contracts. No lock-in. Cancel anytime.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="ln-section bg-paper">
+    <div class="max-w-3xl mx-auto px-6">
+      <div class="text-center mb-16 ln-reveal">
+        <h2 class="font-display font-bold text-5xl md:text-6xl text-forest-dark mb-4">
+          Questions? Answered.
+        </h2>
+      </div>
+      <div class="space-y-4">
+        <details class="ln-faq-item ln-reveal">
+          <summary>How is this different from Todoist, Things, or Asana?</summary>
+          <p>Those are task managers &mdash; they hold your list. ThinkDone is a strategic planning partner. It reads your full landscape, challenges your priorities, remembers your commitments, and builds your day. It doesn't manage tasks. It manages your attention.</p>
+        </details>
+        <details class="ln-faq-item ln-reveal">
+          <summary>What's the AI memory system?</summary>
+          <p>Every decision, commitment, and pattern from your planning sessions is remembered. ThinkDone notices when projects stall, reminds you of promises, and recognizes when things keep getting deferred. It's institutional knowledge &mdash; for your life.</p>
+        </details>
+        <details class="ln-faq-item ln-reveal">
+          <summary>Do I need to be technical?</summary>
+          <p>Not at all. If you can have a conversation and check a box, you can use ThinkDone. All the complexity is behind the scenes.</p>
+        </details>
+        <details class="ln-faq-item ln-reveal">
+          <summary>What if I don't like it?</summary>
+          <p>Full pro-rated refund within 30 days, no questions asked. Cancel anytime after that. No contracts, no lock-in.</p>
+        </details>
+        <details class="ln-faq-item ln-reveal">
+          <summary>What's OpenClaw?</summary>
+          <p>OpenClaw is an AI personal assistant that executes tasks for you &mdash; research, scheduling, email drafts. ThinkDone Pro integrates directly so you can delegate tasks from your daily plan.</p>
+        </details>
+        <details class="ln-faq-item ln-reveal">
+          <summary>Can it handle lots of projects?</summary>
+          <p>That's exactly what it was built for. The founder runs 12+ projects simultaneously. ThinkDone monitors them all, surfaces stalling ones, and ensures you advance on every front.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="ln-final-cta">
+    <div class="ln-blob ln-blob-sage" style="width:600px;height:600px;top:-20%;right:-10%"></div>
+    <div class="ln-blob ln-blob-gold" style="width:500px;height:500px;bottom:-20%;left:-10%;animation-delay:-8s"></div>
+    <svg class="absolute top-0 left-0 w-full" viewBox="0 0 1440 120" preserveAspectRatio="none" style="height:120px;transform:scaleY(-1)">
+      <path d="M0,64 C240,96 480,96 720,64 C960,32 1200,32 1440,64 L1440,120 L0,120 Z" fill="var(--color-paper)"/>
+    </svg>
+    <div class="relative z-10 max-w-4xl mx-auto px-6 text-center ln-reveal">
+      <h2 class="font-display font-bold text-paper mb-6" style="font-size:clamp(3rem,8vw,5.5rem);line-height:1.1">
+        Stop planning. Start doing.
+      </h2>
+      <p class="font-hand text-paper/65 text-xl md:text-2xl max-w-2xl mx-auto mb-10 leading-relaxed">
+        15 minutes every morning. One clean list. The rest of the day is yours.
+      </p>
+      <a href="#pricing" class="ln-btn-gradient ln-btn-lg">Try It for a Buck</a>
+      <p class="font-ui text-paper/35 text-xs mt-6">
+        $1 to start &middot; AI usage billed separately &middot; Cancel anytime
+      </p>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer class="bg-forest-darkest text-paper/70 py-16">
+    <div class="max-w-7xl mx-auto px-6">
+      <div class="grid md:grid-cols-3 gap-12 mb-12">
+        <div>
+          <div class="flex items-center gap-3 mb-4">
+            <img src="/favicon.png" alt="" width="40" height="40" class="rounded-lg">
+            <span class="font-display font-bold text-2xl text-paper">Think<span style="opacity:0.35">-</span>Done</span>
+          </div>
+          <p class="font-display italic text-paper/50">&ldquo;Done is the engine of more.&rdquo;</p>
+        </div>
+        <div>
+          <h4 class="font-ui font-semibold text-paper mb-4">Product</h4>
+          <ul class="space-y-2 font-ui text-sm">
+            <li><a href="#features" class="hover:text-paper transition-colors">Features</a></li>
+            <li><a href="#pricing" class="hover:text-paper transition-colors">Pricing</a></li>
+            <li><a href="#how-it-works" class="hover:text-paper transition-colors">How It Works</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-ui font-semibold text-paper mb-4">Company</h4>
+          <ul class="space-y-2 font-ui text-sm">
+            <li><a href="#" class="hover:text-paper transition-colors">Privacy</a></li>
+            <li><a href="#" class="hover:text-paper transition-colors">Terms</a></li>
+            <li><a href="#" class="hover:text-paper transition-colors">Contact</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="border-t border-paper/10 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+        <p class="font-ui text-sm text-paper/50">Built with intention. Designed for clarity.</p>
+        <p class="font-ui text-sm text-paper/50">from <a href="https://xswarm.ai" class="text-gold hover:text-paper transition-colors" target="_blank" rel="noopener">xSwarm.ai</a></p>
+      </div>
+    </div>
+  </footer>
 
   <script>
-    const QUOTES = [
-      "Done is the engine of more.",
-      "Finished is better than perfect.",
-      "Small steps still move you forward.",
-      "What gets scheduled gets done.",
-      "Progress, not perfection.",
-      "Today\u2019s priorities shape tomorrow\u2019s possibilities.",
-      "The best plan is the one you actually follow.",
-      "Clarity precedes action.",
-      "Less deciding, more doing.",
-      "Your future self will thank you.",
-      "Focus is saying no to good ideas.",
-      "Action cures anxiety.",
-      "Ship it. Then improve it.",
-      "One thing at a time. Most important thing first.",
-      "Think strategically. Execute relentlessly.",
-    ];
-    let qi = Math.floor(Math.random() * QUOTES.length);
-    const quoteEl = document.getElementById('quote');
-    if (quoteEl) {
-      quoteEl.textContent = '\u201C' + QUOTES[qi] + '\u201D';
-      quoteEl.style.transition = 'opacity 0.4s';
-      setInterval(() => {
-        quoteEl.style.opacity = '0';
-        setTimeout(() => {
-          qi = (qi + 1) % QUOTES.length;
-          quoteEl.textContent = '\u201C' + QUOTES[qi] + '\u201D';
-          quoteEl.style.opacity = '1';
-        }, 400);
-      }, 12000);
-    }
-
-    // Date display
-    const dateEl = document.getElementById('date');
-    if (dateEl) {
-      const d = new Date();
-      dateEl.textContent = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    }
-
-    // Time in footer
-    function updateTime() {
-      const el = document.getElementById('ts');
-      if (el) el.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    }
-    updateTime();
-    setInterval(updateTime, 60000);
-
-    // (+) button focuses the add input
-    document.getElementById('addBtn')?.addEventListener('click', () => {
-      const input = document.querySelector('.add-input');
-      if (input) { input.focus(); input.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+    // Scroll reveal
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); obs.unobserve(e.target); } });
+    }, { threshold: 0.1, rootMargin: '0px 0px -50px 0px' });
+    document.querySelectorAll('.ln-reveal').forEach(el => obs.observe(el));
+    // Smooth scroll
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', e => {
+        const t = document.querySelector(a.getAttribute('href'));
+        if (t) { e.preventDefault(); t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      });
     });
-
-    // Mic button placeholder
-    document.getElementById('micBtn')?.addEventListener('click', () => {
-      alert('Ad-hoc meeting — coming soon!');
-    });
-
-    // Register service worker for PWA
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(() => {});
-    }
   </script>
+  <GoogleOneTap />
 </body>
 </html>
 
 <style is:global>
-  .page {
-    max-width: 520px;
-    margin: 0 auto;
-    padding: 0 1rem 1.5rem;
-    min-height: 100vh;
-    border-left: 2px solid var(--color-margin);
-    border-right: 1px solid var(--color-rule);
-    background: color-mix(in srgb, var(--color-paper-bright) 50%, transparent);
+  /* ═══ LANDING PAGE BASE ═══ */
+  .landing-page {
+    font-family: var(--font-hand);
+    background-color: var(--color-warm);
+    color: var(--color-ink);
+    background-image: none;
+    overflow-x: hidden;
   }
 
-  @media (max-width: 540px) {
-    .page {
-      padding: 0 0.4rem 1rem;
-      border-left: none;
-      border-right: none;
-      max-width: 100%;
-    }
+  /* ═══ UTILITIES ═══ */
+  .bg-warm { background-color: var(--color-warm); }
+  .bg-forest-dark { background-color: var(--color-forest-dark); }
+  .bg-forest-darkest { background-color: var(--color-forest-darkest); }
+  .ln-section { padding: 5rem 0; }
+  @media (min-width: 768px) { .ln-section { padding: 8rem 0; } }
+
+  .ln-graph-bg {
+    background-image:
+      linear-gradient(rgba(139,69,19,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(139,69,19,0.03) 1px, transparent 1px);
+    background-size: 20px 20px;
   }
 
-  .brand {
-    padding: 0.3rem 0 0.2rem;
-    border-bottom: 2px solid var(--color-ink-faint);
-    margin-bottom: 0.15rem;
-    position: sticky;
-    top: 0;
-    background: color-mix(in srgb, var(--color-paper) 97%, transparent);
-    z-index: 10;
-    backdrop-filter: blur(8px);
+  /* ═══ SCROLL REVEAL ═══ */
+  .ln-reveal { opacity: 0; transform: translateY(30px); transition: opacity 0.8s ease, transform 0.8s ease; }
+  .ln-reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* ═══ BLOBS ═══ */
+  .ln-blob {
+    position: absolute;
+    border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+    filter: blur(60px);
+    opacity: 0.15;
+    pointer-events: none;
+    animation: ln-float 20s ease-in-out infinite;
   }
-  .brand-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
+  .ln-blob-sage { background-color: var(--color-sage); }
+  .ln-blob-gold { background-color: var(--color-gold); }
+  @keyframes ln-float {
+    0%, 100% { transform: translate(0,0) rotate(0deg); }
+    33% { transform: translate(30px,-30px) rotate(120deg); }
+    66% { transform: translate(-20px,20px) rotate(240deg); }
   }
-  .brand-right {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-shrink: 0;
-  }
-  .brand h1 {
-    font-family: var(--font-display);
-    font-weight: 700;
-    font-size: 1.5rem;
-    color: var(--color-ink-light);
-    line-height: 1;
-    white-space: nowrap;
-  }
-  .brand h1 .arrow { color: var(--color-gold); font-weight: 400; }
-  .brand .date {
+
+  /* ═══ BUTTONS ═══ */
+  .ln-btn-gradient {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--color-accent), var(--color-gold));
+    color: #fff;
+    padding: 0.8rem 2rem;
+    border-radius: 0.5rem;
     font-family: var(--font-ui);
-    font-size: 0.6rem;
-    color: var(--color-ink-muted);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    white-space: nowrap;
+    font-weight: 600;
+    font-size: 1.1rem;
+    text-decoration: none;
+    transition: opacity 0.2s, transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 16px rgba(139,69,19,0.3);
   }
-  .header-btn {
-    appearance: none;
-    border: 1px solid var(--color-ink-faint);
-    background: transparent;
-    color: var(--color-ink-muted);
-    border-radius: 4px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: color 0.15s, border-color 0.15s, background 0.15s;
-    padding: 0;
-  }
-  .header-btn:hover {
-    color: var(--color-accent);
-    border-color: var(--color-accent);
-    background: rgba(139,69,19,0.05);
-  }
-  .mic-btn {
-    width: 24px; height: 24px;
-    padding: 4px;
-  }
-  .brand .quote {
-    font-family: var(--font-display);
-    font-size: 1rem;
-    color: var(--color-ink-light);
-    font-style: italic;
-    margin-top: 0.05rem;
-    min-height: 1em;
-    line-height: 1.2;
-  }
-
-  .footer {
+  .ln-btn-gradient:hover { opacity: 0.9; transform: translateY(-2px); box-shadow: 0 6px 24px rgba(139,69,19,0.4); }
+  .ln-btn-lg { font-size: 1.25rem; padding: 1rem 3rem; }
+  .ln-btn-block { display: block; width: 100%; text-align: center; }
+  .ln-btn-ghost {
+    display: inline-block;
+    border: 2px solid var(--color-paper);
+    color: var(--color-paper);
+    padding: 0.8rem 2rem;
+    border-radius: 0.5rem;
     font-family: var(--font-ui);
-    font-size: 0.65rem;
-    color: var(--color-done);
+    font-weight: 600;
+    font-size: 1.1rem;
+    text-decoration: none;
+    transition: background 0.2s;
+  }
+  .ln-btn-ghost:hover { background: rgba(244,239,230,0.1); }
+  .ln-btn-outline {
+    display: block;
+    width: 100%;
     text-align: center;
-    margin-top: 1rem;
-    padding-top: 0.4rem;
-    border-top: 1px solid var(--color-rule);
+    border: 2px solid var(--color-accent);
+    color: var(--color-accent);
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-family: var(--font-ui);
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  .ln-btn-outline:hover { background: var(--color-accent); color: #fff; }
+
+  /* ═══ HERO ═══ */
+  .ln-hero {
+    position: relative; min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    background-color: var(--color-forest-dark);
+    overflow: hidden; padding: 6rem 1.5rem 4rem;
+  }
+  .ln-hero-glow {
+    position: absolute; top: 30%; left: 50%; width: 800px; height: 600px;
+    transform: translate(-50%,-50%);
+    background: radial-gradient(ellipse, rgba(184,134,11,0.08) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .ln-hero-grid {
+    position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(244,239,230,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(244,239,230,0.04) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+  .ln-hero-icon {
+    border-radius: 1.25rem; margin: 0 auto 1.5rem;
+    filter: drop-shadow(0 8px 24px rgba(0,0,0,0.4));
+    display: block;
+    animation: ln-icon-float 4s ease-in-out infinite;
+  }
+  @keyframes ln-icon-float {
+    0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 8px 24px rgba(0,0,0,0.4)); }
+    50% { transform: translateY(-8px) scale(1.03); filter: drop-shadow(0 16px 32px rgba(0,0,0,0.3)); }
   }
 
-  .fab {
-    position: fixed;
-    bottom: 24px;
-    right: 24px;
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    border: none;
-    background: var(--color-accent);
-    color: white;
-    font-size: 1.8rem;
-    font-weight: 300;
-    line-height: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 3px 12px rgba(0,0,0,0.2), 0 1px 4px rgba(0,0,0,0.12);
-    transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
-    z-index: 50;
-    padding: 0;
-    padding-bottom: 1px;
+  /* ═══ TWO PHASES ═══ */
+  .ln-phases-grid {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 2rem; align-items: center;
   }
-  .fab:hover {
-    transform: scale(1.1);
-    box-shadow: 0 4px 18px rgba(0,0,0,0.25);
-    background: var(--color-gold);
+  @media (max-width: 768px) {
+    .ln-phases-grid { grid-template-columns: 1fr; }
   }
-  .fab:active { transform: scale(0.95); }
+  .ln-phase-card {
+    background: var(--color-paper);
+    border-radius: 1rem; padding: 2rem;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+    border: 1px solid var(--color-ink-faint);
+  }
+
+  /* ═══ PRODUCT MOCKUP ═══ */
+  .ln-mockup {
+    border-radius: 0.75rem; overflow: hidden;
+    box-shadow: 0 8px 40px rgba(58,50,38,0.12), 0 2px 8px rgba(58,50,38,0.08);
+    border: 2px solid var(--color-ink-faint);
+    display: flex; background: var(--color-paper);
+  }
+  .ln-mockup-margin { width: 3px; background: var(--color-margin); flex-shrink: 0; }
+  .ln-mockup-inner {
+    flex: 1; padding: 1rem 1.25rem;
+    background-image:
+      linear-gradient(rgba(139,69,19,0.04) 1px, transparent 1px);
+    background-size: 100% 20px;
+  }
+  .ln-mock-task {
+    display: flex; align-items: center; gap: 0.5rem;
+    padding: 0.4rem 0; border-bottom: 1px solid rgba(196,181,160,0.25);
+    font-family: var(--font-hand); font-size: 0.9rem;
+  }
+  .ln-mock-done { opacity: 0.55; }
+  .ln-mock-overflow { opacity: 0.35; }
+  .ln-mock-check {
+    width: 16px; height: 16px; border-radius: 2px;
+    border: 1.5px solid var(--color-ink-muted);
+    display: inline-flex; align-items: center; justify-content: center;
+    flex-shrink: 0; font-size: 0.6rem; background: var(--color-paper-bright);
+  }
+  .ln-mock-checked {
+    border-color: var(--color-success); background: var(--color-success); color: #fff;
+  }
+  .ln-mock-text { flex: 1; min-width: 0; color: var(--color-ink); }
+  .ln-mock-time {
+    font-family: var(--font-ui); font-size: 0.6rem;
+    color: var(--color-gold); background: rgba(184,134,11,0.1);
+    padding: 1px 5px; border-radius: 3px; flex-shrink: 0;
+  }
+  .ln-mock-tag {
+    font-family: var(--font-ui); font-size: 0.55rem;
+    color: var(--color-ink-light); background: var(--color-tag-bg);
+    border: 1px solid var(--color-ink-faint);
+    padding: 0 5px; border-radius: 3px; flex-shrink: 0;
+    text-transform: lowercase;
+  }
+  .ln-mock-dayend {
+    text-align: center; padding: 0.4rem 0;
+    font-family: var(--font-ui); font-size: 0.7rem;
+    font-weight: 600; color: var(--color-accent);
+  }
+
+  /* ═══ FEATURES ═══ */
+  .ln-feature-card {
+    background: var(--color-paper); border-radius: 0.75rem;
+    padding: 2rem; border: 1px solid var(--color-ink-faint);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  .ln-feature-card:hover { transform: translateY(-4px); box-shadow: 0 8px 24px rgba(58,107,78,0.1); }
+  .ln-feature-icon {
+    width: 3rem; height: 3rem; border-radius: 50%;
+    background: rgba(58,107,78,0.1);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 1rem;
+  }
+
+  /* ═══ STEPS ═══ */
+  .ln-steps-line {
+    position: absolute; left: 2rem; top: 2rem; bottom: 2rem;
+    width: 2px; background: rgba(58,107,78,0.2);
+  }
+  .ln-step-num {
+    position: absolute; left: 0;
+    width: 4rem; height: 4rem; border-radius: 50%;
+    background: var(--color-forest); color: #fff;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-display); font-weight: 700; font-size: 1.5rem;
+  }
+
+  /* ═══ PRICING ═══ */
+  .ln-price-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem; max-width: 64rem; margin: 0 auto;
+  }
+  @media (max-width: 768px) { .ln-price-grid { grid-template-columns: 1fr; max-width: 24rem; margin: 0 auto; } }
+  .ln-price-card {
+    background: var(--color-paper); border-radius: 1rem;
+    padding: 2rem; border: 2px solid var(--color-ink-faint);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    position: relative; transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .ln-price-card:hover { transform: translateY(-4px); box-shadow: 0 8px 32px rgba(0,0,0,0.1); }
+  .ln-price-pro {
+    border-color: var(--color-gold);
+    box-shadow: 0 4px 24px rgba(184,134,11,0.15);
+  }
+  .ln-price-pro:hover { box-shadow: 0 8px 36px rgba(184,134,11,0.25); }
+  .ln-price-badge {
+    position: absolute; top: -0.75rem; left: 50%; transform: translateX(-50%);
+    background: linear-gradient(135deg, var(--color-gold), #d4a544);
+    color: #fff; padding: 0.25rem 1rem; border-radius: 9999px;
+    font-family: var(--font-ui); font-size: 0.7rem;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  .ln-price-features {
+    list-style: none; padding: 0; margin: 0 0 2rem;
+  }
+  .ln-price-features li {
+    display: flex; align-items: flex-start; gap: 0.75rem;
+    padding: 0.5rem 0; font-family: var(--font-hand);
+    color: var(--color-ink-light); border-bottom: 1px solid rgba(196,181,160,0.2);
+  }
+  .ln-price-features li:last-child { border-bottom: none; }
+
+  /* ═══ FAQ ═══ */
+  .ln-faq-item {
+    background: var(--color-warm); border-radius: 0.5rem;
+    border: 1px solid var(--color-ink-faint); overflow: hidden;
+  }
+  .ln-faq-item summary {
+    padding: 1.25rem 1.5rem; cursor: pointer;
+    font-family: var(--font-display); font-weight: 700;
+    font-size: 1.25rem; color: var(--color-forest-dark);
+    list-style: none; display: flex; align-items: center;
+    justify-content: space-between;
+  }
+  .ln-faq-item summary::-webkit-details-marker { display: none; }
+  .ln-faq-item summary::after {
+    content: '+'; font-family: var(--font-ui); font-size: 1.5rem;
+    color: var(--color-gold); transition: transform 0.2s;
+    flex-shrink: 0; margin-left: 1rem;
+  }
+  .ln-faq-item[open] summary::after { content: '\2212'; }
+  .ln-faq-item p {
+    padding: 0 1.5rem 1.25rem;
+    font-family: var(--font-hand); color: var(--color-ink-light);
+    line-height: 1.6; font-size: 1.02rem;
+  }
+
+  /* ═══ FINAL CTA ═══ */
+  .ln-final-cta {
+    position: relative; padding: 8rem 0;
+    background-color: var(--color-forest-dark);
+    text-align: center; overflow: hidden;
+  }
 </style>

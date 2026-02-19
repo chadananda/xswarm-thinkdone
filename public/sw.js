@@ -1,5 +1,11 @@
 const CACHE = 'thinkdone-v1';
-const SHELL = ['/', '/manifest.json', '/icon-192.png'];
+const SHELL = [
+  '/', '/manifest.json', '/icon-192.png',
+  '/fonts/caveat-latin.woff2',
+  '/fonts/patrick-hand-latin.woff2',
+  '/fonts/inter-latin.woff2',
+  '/fonts/ibm-plex-mono-latin.woff2',
+];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)));
@@ -17,6 +23,8 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
+  // Auth redirects — let browser handle natively (preserves hash fragments)
+  if (url.pathname.startsWith('/api/auth/')) return;
   // API calls always go to network
   if (url.pathname.startsWith('/api/')) {
     e.respondWith(fetch(e.request));

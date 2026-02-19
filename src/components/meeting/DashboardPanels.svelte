@@ -7,10 +7,10 @@
   export let animated = false;
 </script>
 
-{#if habits.length > 0}
-  <!-- Habits -->
-  <section class="panel" aria-labelledby="habits-heading">
-    <h3 class="section-title" id="habits-heading">Habit Streaks</h3>
+<!-- Habits -->
+<section class="panel" aria-labelledby="habits-heading">
+  <h3 class="section-title" id="habits-heading">Habit Streaks</h3>
+  {#if habits.length > 0}
     <div class="habits-grid" role="list" aria-label="Active habits">
       {#each habits as h}
         <div class="habit-chip" role="listitem" aria-label="{h.name}, {h.streak} day streak">
@@ -20,13 +20,29 @@
         </div>
       {/each}
     </div>
-  </section>
-{/if}
+  {:else}
+    <div class="ghost" aria-label="Example habits">
+      <div class="habits-grid">
+        {#each [
+          { icon: '\u25C7', name: 'Exercise', streak: 12 },
+          { icon: '\u25C7', name: 'Read', streak: 5 },
+          { icon: '\u25C7', name: 'Journal', streak: 3 },
+        ] as h}
+          <div class="habit-chip">
+            <span class="habit-icon">{h.icon}</span>
+            <span>{h.name}</span>
+            <span class="habit-streak">{h.streak}</span>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {/if}
+</section>
 
-{#if projects.length > 0}
-  <!-- Projects -->
-  <section class="panel" aria-labelledby="projects-heading">
-    <h3 class="section-title" id="projects-heading">Project Health</h3>
+<!-- Projects -->
+<section class="panel" aria-labelledby="projects-heading">
+  <h3 class="section-title" id="projects-heading">Project Health</h3>
+  {#if projects.length > 0}
     <div class="project-list" role="list" aria-label="Project status">
       {#each projects as p}
         {@const healthClass = p.health.includes('needs') ? 'needs' : p.health.includes('steady') ? 'steady' : ''}
@@ -37,13 +53,30 @@
         </div>
       {/each}
     </div>
-  </section>
-{/if}
+  {:else}
+    <div class="ghost" aria-label="Example projects">
+      <div class="project-list">
+        {#each [
+          { velocity: '\u25B2', name: 'Product Launch', health: 'on track', color: 'var(--color-phase-orient)' },
+          { velocity: '\u25BC', name: 'Blog Redesign', health: 'needs focus', color: 'var(--color-phase-commit)' },
+          { velocity: '\u25B2', name: 'Q2 Planning', health: 'on track', color: 'var(--color-phase-orient)' },
+        ] as p}
+          {@const healthClass = p.health.includes('needs') ? 'needs' : ''}
+          <div class="project-item">
+            <span class="project-velocity" style="color: {p.color}">{p.velocity}</span>
+            <span class="project-name">{p.name}</span>
+            <span class="project-health {healthClass}">{p.health}</span>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {/if}
+</section>
 
-{#if scorecard.length > 0 && scorecard.some(s => s.pct > 0)}
-  <!-- Scorecard -->
-  <section class="panel" aria-labelledby="scorecard-heading">
-    <h3 class="section-title" id="scorecard-heading">Weekly Scorecard</h3>
+<!-- Scorecard -->
+<section class="panel" aria-labelledby="scorecard-heading">
+  <h3 class="section-title" id="scorecard-heading">Weekly Scorecard</h3>
+  {#if scorecard.length > 0 && scorecard.some(s => s.pct > 0)}
     <div class="scorecard-grid" role="list" aria-label="Weekly metrics">
       {#each scorecard as item}
         <div class="scorecard-card" role="listitem">
@@ -55,11 +88,29 @@
         </div>
       {/each}
     </div>
-  </section>
-{/if}
+  {:else}
+    <div class="ghost" aria-label="Example scorecard">
+      <div class="scorecard-grid">
+        {#each [
+          { label: 'Tasks Done', value: '8/12', pct: 67 },
+          { label: 'Habits', value: '3 tracked', pct: 45 },
+        ] as item}
+          <div class="scorecard-card">
+            <div class="scorecard-label">{item.label}</div>
+            <div class="scorecard-value">{item.value}</div>
+            <div class="scorecard-bar">
+              <div class="scorecard-bar-fill" style="width: {item.pct}%"></div>
+            </div>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {/if}
+</section>
 
 <style>
   .panel { margin-bottom: 24px; }
+  .ghost { opacity: 0.3; pointer-events: none; }
   .section-title {
     font-family: var(--font-display);
     font-size: 20px;

@@ -91,11 +91,82 @@ export async function ensureFreshToken(tokenData) {
   return fresh.access_token;
 }
 
+// --- Browser-direct Gemini call ---
+// Calls Gemini API directly from the browser — no server proxy needed.
+// Returns a Response with normalized SSE stream ({ text } / { usage } chunks).
+
+const GEMINI_API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
+
+async function callGeminiBrowser(model, system, messages, connection) {
+  const { systemInstruction, contents } = translateToGeminiFormat(system, messages);
+  const token = connection?.refresh_token
+    ? await ensureFreshToken(connection)
+    : connection?.access_token;
+
+  let url = `${GEMINI_API_BASE}/models/${model}:streamGenerateContent?alt=sse`;
+  const headers = { 'Content-Type': 'application/json' };
+
+  if (connection?.refresh_token) {
+    // OAuth — Bearer token
+    headers['Authorization'] = `Bearer ${token}`;
+  } else {
+    // API key — query param
+    url += `&key=${token}`;
+  }
+
+  const apiResponse = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ systemInstruction, contents }),
+  });
+
+  if (!apiResponse.ok) return apiResponse;
+
+  // Transform Gemini SSE into normalized { text } / { usage } format
+  const transformed = new ReadableStream({
+    async start(controller) {
+      const reader = apiResponse.body.getReader();
+      const decoder = new TextDecoder();
+      const encoder = new TextEncoder();
+      let buffer = '';
+      try {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            try {
+              const parsed = parseGeminiSSEChunk(JSON.parse(line.slice(6)), model);
+              if (parsed) controller.enqueue(encoder.encode(`data: ${JSON.stringify(parsed)}\n\n`));
+            } catch {}
+          }
+        }
+      } finally {
+        controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(transformed, {
+    status: 200,
+    headers: { 'Content-Type': 'text/event-stream' },
+  });
+}
+
 // --- Single provider call ---
 
 async function callSingleProvider(entry, { system, messages }) {
   const { providerId, model, endpoint, connection } = entry;
   const p = PROVIDERS[providerId];
+
+  // Browser-direct: Gemini with a connection token bypasses server proxy entirely
+  if (providerId === 'gemini' && connection?.access_token) {
+    return callGeminiBrowser(model, system, messages, connection);
+  }
 
   // Anthropic-compatible endpoints get structured blocks; others get flat string
   const isAnthropicEndpoint = endpoint === '/api/chat';
@@ -104,12 +175,12 @@ async function callSingleProvider(entry, { system, messages }) {
 
   if (providerId === 'anthropic') {
     body.api_key = connection.access_token;
-  } else if (providerId === 'gemini') {
-    if (connection?.refresh_token) {
-      body.access_token = await ensureFreshToken(connection);
-    } else if (connection) {
-      body.api_key = connection.access_token;
-    }
+  } else if (p?.auth === 'local') {
+    // Local providers (Ollama, LM Studio, custom) — read URL override from connection scopes
+    let meta = {};
+    try { if (connection?.scopes) meta = JSON.parse(connection.scopes); } catch {}
+    body.base_url = meta.baseUrl || p.apiBase;
+    if (connection?.access_token) body.api_key = connection.access_token;
   } else if (p?.apiBase) {
     // OpenAI-compatible (Groq, OpenAI, Grok, DeepSeek, etc.)
     body.api_key = connection.access_token;

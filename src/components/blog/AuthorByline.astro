@@ -1,0 +1,20 @@
+---
+interface Props { name: string; avatar: string; date: string; readingTime?: string; }
+import { imgUrl } from '../../lib/imgix';
+const { name, avatar, date, readingTime } = Astro.props;
+const formatted = new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+---
+<div class="flex items-center gap-3">
+  <img src={imgUrl(avatar, { w: 64, h: 64, fit: 'crop' })} alt={name} width="32" height="32" class="rounded-full border border-ink-faint" loading="lazy" />
+  <div class="flex items-center gap-2 font-ui text-sm text-ink-muted">
+    <span class="font-medium text-ink-light">{name}</span>
+    <span>&middot;</span>
+    <time datetime={date}>{formatted}</time>
+    {readingTime && (
+      <>
+        <span>&middot;</span>
+        <span class="bg-gold/10 text-gold px-1.5 py-0.5 rounded text-xs font-medium">{readingTime}</span>
+      </>
+    )}
+  </div>
+</div>

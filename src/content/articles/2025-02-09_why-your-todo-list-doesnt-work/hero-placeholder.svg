@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="600" viewBox="0 0 1400 600">
+  <rect fill="#f4efe6" width="1400" height="600"/>
+  <rect fill="#fffdf8" x="100" y="80" width="400" height="440" rx="8" stroke="#c4b5a0" stroke-width="2"/>
+  <line x1="130" y1="120" x2="470" y2="120" stroke="#d5cec3" stroke-width="1.5"/>
+  <line x1="130" y1="155" x2="470" y2="155" stroke="#d5cec3" stroke-width="1.5"/>
+  <line x1="130" y1="190" x2="470" y2="190" stroke="#d5cec3" stroke-width="1.5"/>
+  <line x1="130" y1="225" x2="470" y2="225" stroke="#d5cec3" stroke-width="1.5"/>
+  <line x1="130" y1="260" x2="470" y2="260" stroke="#d5cec3" stroke-width="1.5"/>
+  <line x1="130" y1="295" x2="470" y2="295" stroke="#d5cec3" stroke-width="1.5"/>
+  <line x1="130" y1="330" x2="470" y2="330" stroke="#d5cec3" stroke-width="1.5"/>
+  <line x1="130" y1="365" x2="470" y2="365" stroke="#d5cec3" stroke-width="1.5"/>
+  <line x1="130" y1="400" x2="470" y2="400" stroke="#d5cec3" stroke-width="1.5"/>
+  <line x1="130" y1="435" x2="470" y2="435" stroke="#d5cec3" stroke-width="1.5"/>
+  <line x1="130" y1="470" x2="470" y2="470" stroke="#d5cec3" stroke-width="1.5"/>
+  <rect fill="#6a8a5a" opacity="0.3" x="120" y="108" width="14" height="14" rx="2"/>
+  <rect fill="#6a8a5a" opacity="0.3" x="120" y="143" width="14" height="14" rx="2"/>
+  <rect fill="none" stroke="#c4b5a0" x="120" y="178" width="14" height="14" rx="2"/>
+  <rect fill="none" stroke="#c4b5a0" x="120" y="213" width="14" height="14" rx="2"/>
+  <rect fill="none" stroke="#c4b5a0" x="120" y="248" width="14" height="14" rx="2"/>
+  <rect fill="none" stroke="#c4b5a0" x="120" y="283" width="14" height="14" rx="2"/>
+  <rect fill="none" stroke="#c4b5a0" x="120" y="318" width="14" height="14" rx="2"/>
+  <rect fill="none" stroke="#c4b5a0" x="120" y="353" width="14" height="14" rx="2"/>
+  <rect fill="none" stroke="#c4b5a0" x="120" y="388" width="14" height="14" rx="2"/>
+  <rect fill="none" stroke="#c4b5a0" x="120" y="423" width="14" height="14" rx="2"/>
+  <rect fill="none" stroke="#c4b5a0" x="120" y="458" width="14" height="14" rx="2"/>
+  <text x="145" y="120" font-family="sans-serif" font-size="13" fill="#7a6a5a" text-decoration="line-through" opacity="0.5">Buy groceries</text>
+  <text x="145" y="155" font-family="sans-serif" font-size="13" fill="#7a6a5a" text-decoration="line-through" opacity="0.5">Email Sarah back</text>
+  <text x="145" y="190" font-family="sans-serif" font-size="13" fill="#3a3226">Finish Q4 report</text>
+  <text x="145" y="225" font-family="sans-serif" font-size="13" fill="#3a3226">Call dentist</text>
+  <text x="145" y="260" font-family="sans-serif" font-size="13" fill="#3a3226">Review budget proposal</text>
+  <text x="145" y="295" font-family="sans-serif" font-size="13" fill="#3a3226">Plan team offsite</text>
+  <text x="145" y="330" font-family="sans-serif" font-size="13" fill="#3a3226">Update LinkedIn profile</text>
+  <text x="145" y="365" font-family="sans-serif" font-size="13" fill="#3a3226">Read chapter 4</text>
+  <text x="145" y="400" font-family="sans-serif" font-size="13" fill="#3a3226">Fix leaky faucet</text>
+  <text x="145" y="435" font-family="sans-serif" font-size="13" fill="#3a3226">Research vacation spots</text>
+  <text x="145" y="470" font-family="sans-serif" font-size="13" fill="#a09080">... and 23 more</text>
+  <!-- Person figure -->
+  <circle cx="900" cy="220" r="50" fill="#c4b5a0"/>
+  <ellipse cx="900" cy="400" rx="80" ry="120" fill="#8b4513" opacity="0.3"/>
+  <!-- Thought bubble -->
+  <circle cx="720" cy="150" r="8" fill="#d5cec3"/>
+  <circle cx="740" cy="130" r="12" fill="#d5cec3"/>
+  <ellipse cx="800" cy="90" rx="120" ry="50" fill="#d5cec3"/>
+  <text x="800" y="85" font-family="sans-serif" font-size="16" fill="#7a6a5a" text-anchor="middle">Where do I even</text>
+  <text x="800" y="105" font-family="sans-serif" font-size="16" fill="#7a6a5a" text-anchor="middle">start...?</text>
+  <!-- Title -->
+</svg>

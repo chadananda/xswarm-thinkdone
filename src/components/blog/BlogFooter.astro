@@ -1,0 +1,28 @@
+---
+const year = new Date().getFullYear();
+---
+<footer class="bg-forest-darkest text-paper/70 py-12">
+  <div class="max-w-5xl mx-auto px-6">
+    <div class="flex flex-col md:flex-row items-center justify-between gap-6 mb-8">
+      <div class="flex items-center gap-3">
+        <img src="/favicon.png" alt="" width="32" height="32" class="rounded-lg" />
+        <div>
+          <span class="font-display font-bold text-lg text-paper">Think<span style="opacity:0.35">-</span><span class="text-gold">Done</span><span class="text-paper/40">.ai</span></span>
+          <p class="font-display italic text-paper/40 text-sm">&ldquo;Done is the engine of more.&rdquo;</p>
+        </div>
+      </div>
+      <nav class="flex flex-wrap items-center gap-4 font-ui text-sm">
+        <a href="/articles" class="text-paper/60 hover:text-paper transition-colors no-underline">Articles</a>
+        <a href="/authors" class="text-paper/60 hover:text-paper transition-colors no-underline">Authors</a>
+        <a href="/#pricing" class="text-paper/60 hover:text-paper transition-colors no-underline">Pricing</a>
+        <a href="#" class="text-paper/60 hover:text-paper transition-colors no-underline">Privacy</a>
+        <a href="#" class="text-paper/60 hover:text-paper transition-colors no-underline">Terms</a>
+        <a href="#" class="text-paper/60 hover:text-paper transition-colors no-underline">Contact</a>
+      </nav>
+    </div>
+    <div class="border-t border-paper/10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
+      <p class="font-ui text-xs text-paper/40">&copy; {year} ThinkDone. All rights reserved.</p>
+      <p class="font-ui text-xs text-paper/40">from <a href="https://xswarm.ai" class="text-gold hover:text-paper transition-colors" target="_blank" rel="noopener">xSwarm.ai</a></p>
+    </div>
+  </div>
+</footer>

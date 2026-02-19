@@ -1,0 +1,24 @@
+---
+interface Props {
+  items: Array<{ q: string; a: string }>;
+}
+import FaqAccordion from './FaqAccordion.svelte';
+const { items } = Astro.props;
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": items.map(item => ({
+    "@type": "Question",
+    "name": item.q,
+    "acceptedAnswer": {
+      "@type": "Answer",
+      "text": item.a,
+    },
+  })),
+};
+---
+<section class="faq-section">
+  <h2 class="font-display font-bold text-3xl text-forest-dark mb-6">Frequently Asked Questions</h2>
+  <FaqAccordion items={items} client:visible />
+  <script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />
+</section>

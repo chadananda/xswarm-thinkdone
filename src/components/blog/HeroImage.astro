@@ -1,0 +1,19 @@
+---
+interface Props {
+  src: string;
+  alt: string;
+  caption?: string;
+  credit?: string;
+}
+import { imgUrl } from '../../lib/imgix';
+const { src, alt, caption, credit } = Astro.props;
+---
+<div class="hero-image-wrap">
+  <img src={imgUrl(src, { w: 1400, h: 600, fit: 'crop' })} width="1400" height="600" alt={alt} class="w-full h-full object-cover" loading="eager" decoding="async" />
+  {(caption || credit) && (
+    <div class="hero-overlay">
+      {caption && <p class="font-ui text-sm text-white/90 m-0">{caption}</p>}
+      {credit && <p class="font-ui text-xs text-white/60 m-0 mt-0.5">{credit}</p>}
+    </div>
+  )}
+</div>

@@ -62,7 +62,7 @@ Memories are never deleted. When a memory becomes outdated, a new memory is stor
 
 ## Database Location
 
-The DB file lives in the user's workspace (outside the git repo) and is referenced via `THINKDONE_DB` env var. Default fallback resolves to `../../memory.db` relative to `src/memory.js`, which places it at the ThinkDone.ai workspace root.
+The DB file lives in the user's workspace (outside the git repo) and is referenced via `THINKDONE_DB` env var. Default fallback resolves to `../../memory.db` relative to `src/memory.js`, which places it at the ThinkDone workspace root.
 
 ## Turso Sync (Optional)
 

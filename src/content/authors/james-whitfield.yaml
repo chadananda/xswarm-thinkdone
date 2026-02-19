@@ -1,0 +1,75 @@
+name: "James Whitfield"
+role: "Executive Productivity Coach"
+bio: "Former COO who coaches C-suite leaders on getting more done with less stress. Specializes in delegation, decision fatigue, and strategic prioritization."
+longBio: |
+  James spent twenty years climbing the corporate ladder, eventually serving as COO at two mid-size tech companies. He was the person everyone came to when things needed to get done — the fixer, the closer, the one who could juggle twelve priorities and make it look effortless. Behind the scenes, it wasn't effortless at all. He was working 70-hour weeks, answering emails at 11 PM, and running on caffeine and the satisfaction of being indispensable.
+
+  The burnout hit at 45. Not gradually — it was a wall. He stepped back from his role and spent six months doing very little, which turned out to be the most productive period of his career. He realized that most of what had kept him busy wasn't important. He'd been confusing activity with progress, urgency with importance, and presence with contribution. The things that actually moved the needle were a handful of decisions, a few key relationships, and the discipline to say no to everything else.
+
+  Now he coaches executives on sustainable productivity — the kind that doesn't require sacrificing your health, relationships, or sanity. His focus areas are delegation (which most leaders are terrible at), decision fatigue (which most leaders don't know is eating them alive), and strategic prioritization (choosing the five things that matter and letting go of the hundred that don't). He writes from experience, not theory, and he's refreshingly honest about his own failures.
+avatar: "authors/james-whitfield-v2.jpg"
+expertise:
+  - "Leadership"
+  - "Delegation"
+  - "Strategic Planning"
+  - "Executive Coaching"
+personality: "Warm, authoritative, practical. Writes from the perspective of someone who's been in the trenches."
+social:
+  linkedin: "james-whitfield-coach"
+featured: false
+sales:
+  tagline: "I ran two companies into the ground — including myself. Then I learned what productivity actually means."
+  accentColor: "#4a6fa5"
+  heroQuote: "I spent twenty years confusing being busy with being effective. The burnout that nearly ended my career taught me the difference. Now I help leaders avoid making my mistakes."
+  problem:
+    headline: "You're the bottleneck, and you don't even know it."
+    description: "You're working harder than anyone on your team. You're making every decision. You're the last one to leave. And you're wondering why things aren't moving faster. I've been exactly where you are."
+    painPoints:
+      - icon: "⏰"
+        text: "70-hour weeks feel normal — and nothing seems to get done faster"
+      - icon: "🏋️"
+        text: "You carry every project in your head because nobody else 'gets it'"
+      - icon: "📧"
+        text: "You're answering emails at 11 PM and calling it dedication"
+      - icon: "🔥"
+        text: "The wall is coming. You either change course or you hit it."
+  philosophy:
+    headline: "Less is the strategy."
+    description: "James's burnout at 45 wasn't gradual — it was a wall. The six months of doing almost nothing that followed became the most productive period of his career. He learned that leadership productivity isn't about doing more."
+    principles:
+      - title: "Five things. Not fifty."
+        description: "The leaders who move fastest focus on 5 key priorities and ruthlessly delegate or eliminate everything else. Your hundred-item list isn't ambition — it's avoidance of choice."
+      - title: "Delegate before you're ready"
+        description: "If you wait until someone can do it as well as you, you'll never delegate. Give them the work at 80% readiness and coach the gap. Your time is worth more than perfection."
+      - title: "Protect the asset"
+        description: "You are the asset. Your energy, clarity, and judgment are what your organization pays for. Grinding yourself down isn't sacrifice — it's negligence."
+  insights:
+    - title: "The Delegation Paradox"
+      description: "Why the leaders who do the least accomplish the most — and the specific conversation framework that makes delegation feel natural instead of risky."
+      icon: "🤝"
+    - title: "Decision Fatigue at the Top"
+      description: "C-suite executives make 10x more decisions than their teams. Most leaders don't realize this invisible tax is why they're exhausted by 2 PM."
+      icon: "🧠"
+    - title: "The Calendar Audit"
+      description: "James's signature exercise: categorize every meeting as 'only I can do this' or 'someone else could.' Most leaders discover 60% of their calendar is optional."
+      icon: "📅"
+    - title: "Sustainable Pace"
+      description: "Sprint culture produces impressive quarters and terrible years. The executives who build lasting organizations run at 70% capacity — and have reserves for when it matters."
+      icon: "🏃"
+  thinkdonePitch:
+    headline: "ThinkDone is the chief of staff I wish I'd had."
+    description: "When I was COO, what I needed wasn't another app — it was someone who knew my full landscape, challenged my priorities, and stopped me from filling my day with low-impact busywork. ThinkDone does exactly that, every morning, in 15 minutes."
+    points:
+      - "AI surfaces the 5 things that actually matter — and pushes back on the 50 that don't"
+      - "Memory system catches the commitments and promises that leaders constantly drop"
+      - "Morning meeting replaces the endless internal monologue about priorities"
+      - "One list forces the discipline of sequential focus that every executive coach preaches but no tool enforces"
+  faq:
+    - q: "I already have an executive assistant. Why do I need this?"
+      a: "Your EA manages your calendar and communications. ThinkDone manages your strategic attention — which projects are advancing, which commitments are aging, which priorities need challenging. It's the strategic thinking layer that sits above scheduling. Most EAs will tell you: they can organize your time, but they can't tell you what matters most."
+    - q: "I don't have time for a daily planning meeting."
+      a: "That's exactly the problem. You don't have time because you're spending your entire day reacting instead of executing. The 15-minute morning meeting is an investment that returns 2-3 hours of focused, strategic work. Every executive I coach who implements this says the same thing: 'I can't believe I used to skip this.'"
+    - q: "Is this for entrepreneurs or corporate leaders?"
+      a: "Both. The underlying challenge is identical: too many priorities, too little strategic clarity, and a calendar that fills itself if you let it. Whether you're running a startup or a division of 500, the discipline of choosing 5 things and protecting your attention is the same."
+    - q: "What about my team's project management tools?"
+      a: "Keep them. ThinkDone doesn't replace Asana, Jira, or Monday. It sits above them. Those tools manage team workflows. ThinkDone manages YOUR day — pulling from all your commitments across every tool and relationship to build your personal strategic plan every morning."

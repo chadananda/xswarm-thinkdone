@@ -1,0 +1,77 @@
+name: "Rachel Torres"
+role: "Comparisons Editor"
+bio: "Tech journalist who's reviewed 200+ productivity tools. She knows what works, what's overhyped, and what's quietly excellent."
+longBio: |
+  Rachel has been reviewing software professionally for over a decade, starting at The Verge and moving through Wirecutter before landing at ThinkDone. In that time she's tested north of 200 productivity tools, project managers, note-taking apps, and everything in between. She's watched apps launch to breathless hype, watched them quietly die, and watched a few actually earn their reputation over years of consistent improvement.
+
+  Her review methodology is straightforward but demanding. She uses every tool as her primary system for at least two weeks — not a sandbox test, but real work with real stakes. She evaluates what happens when your system has 200 tasks, not 12. She checks whether the mobile app is actually usable or just a checkbox on the marketing page. And she pays attention to the things that don't show up in feature comparisons: how fast does it load? Does it respect your attention or constantly ping you? Can you get your data out if you leave?
+
+  Rachel's fundamental belief is that the best productivity tool is the one you'll actually use. A technically inferior app that fits your brain is worth more than a powerful system that fights you at every step. She's direct about what she likes and what she doesn't, but she's fair — and she's been wrong enough times to know that her preferences aren't universal truths.
+avatar: "authors/rachel-torres-v2.jpg"
+expertise:
+  - "App Reviews"
+  - "Tool Comparisons"
+  - "UX Analysis"
+  - "Workflow Design"
+personality: "Direct, opinionated, fair. Calls BS on feature bloat. Appreciates good design."
+social:
+  twitter: "@racheltorres"
+  linkedin: "rachel-torres-tech"
+  website: "https://think-done.com/authors/rachel-torres"
+featured: true
+sales:
+  tagline: "I've tested 200+ productivity tools. Most of them are solving the wrong problem."
+  accentColor: "#e76f51"
+  heroQuote: "After a decade of reviewing every task manager, project tool, and productivity app on the market, I can tell you exactly what they all get wrong — and what ThinkDone gets right."
+  problem:
+    headline: "You don't need a better task manager. You need to stop managing tasks."
+    description: "I've reviewed them all. Beautiful apps with gorgeous interfaces that give you 47 ways to organize tasks you'll never complete. The problem isn't the tool. It's the entire category."
+    painPoints:
+      - icon: "📱"
+        text: "You've spent more time setting up productivity apps than being productive"
+      - icon: "🏷️"
+        text: "Tags, folders, priorities, contexts — you're filing, not working"
+      - icon: "💸"
+        text: "You're paying for features you'll never use in 3 different apps"
+      - icon: "🔍"
+        text: "The 'perfect system' doesn't exist — I've looked everywhere"
+  philosophy:
+    headline: "The best tool is the one that disappears."
+    description: "After 200+ reviews, Rachel's conclusion is counterintuitive: the best productivity tool is the one you think about least. It should do its job and get out of your way."
+    principles:
+      - title: "Real work, not sandbox tests"
+        description: "Every tool gets two weeks as my primary system. Not a demo. Not a walkthrough. Two weeks of actual work with actual stakes. That's how you find the cracks."
+      - title: "200 tasks, not 12"
+        description: "Every app looks great with 12 tasks. I test at scale — 200+ items, 10+ projects, real deadlines. That's where the failures show up."
+      - title: "Can you leave?"
+        description: "The most important test: can you export your data and walk away? If a tool holds your productivity hostage, it's not a tool — it's a trap."
+  insights:
+    - title: "The Feature Bloat Paradox"
+      description: "Why the apps with the most features consistently produce the worst outcomes — and what the research says about choice paralysis in productivity tools."
+      icon: "🎛️"
+    - title: "The Mobile Test"
+      description: "If the mobile app is an afterthought, the developers don't actually use their own product. This simple test eliminates 60% of tools instantly."
+      icon: "📱"
+    - title: "Speed Is a Feature"
+      description: "Every 100ms of load time reduces daily usage by 7%. The fastest tools win not because they're better, but because friction kills habits."
+      icon: "⚡"
+    - title: "The Switching Cost Trap"
+      description: "Why productivity app hopping feels productive but costs you 2-3 weeks of real output every time. And when switching is actually worth it."
+      icon: "🔄"
+  thinkdonePitch:
+    headline: "After reviewing everything else, here's why I use ThinkDone."
+    description: "I've been reviewing productivity tools for over a decade. I know every Todoist keyboard shortcut, every Notion template, every Things 3 workflow. And I chose ThinkDone — not because it has more features, but because it eliminates the need for most of them."
+    points:
+      - "No setup required — there's nothing to configure, tag, or organize. Just start talking."
+      - "AI planning replaces the 30 minutes of daily organizing that every other tool demands"
+      - "One list means one place to look. I tested this against multi-view systems — simplicity wins every time."
+      - "It respects your data — plain text, exportable, no lock-in. Passes my most important test."
+  faq:
+    - q: "How does ThinkDone compare to Todoist?"
+      a: "Todoist is the best traditional task manager — I gave it a 9.2. But it still requires you to do all the thinking: prioritizing, scheduling, reviewing. ThinkDone offloads that cognitive work to AI. They solve different problems. Todoist manages tasks. ThinkDone manages your attention."
+    - q: "Why not just use Notion for everything?"
+      a: "I love Notion for documentation and wikis. But as a daily productivity tool, it's too flexible — you spend more time building systems than using them. ThinkDone is deliberately opinionated: one list, one meeting, done. The constraint is the feature."
+    - q: "Is simpler really better? What about complex project management?"
+      a: "ThinkDone isn't replacing your project management tool — it's replacing the part of your brain that decides what to work on TODAY. Keep Jira for sprint planning. Keep Linear for engineering tickets. Use ThinkDone for the daily question: 'What should I do right now, in what order?' That's the question no project tool actually answers."
+    - q: "What about Things 3, TickTick, or newer apps like Akiflow?"
+      a: "I've reviewed them all extensively. They're all variations on the same theme: give the user a beautiful interface to manage their own tasks. ThinkDone breaks the paradigm entirely. The AI manages. You execute. It's a different category of tool, and after testing the field, I think it's the right one."

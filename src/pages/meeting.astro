@@ -1,0 +1,79 @@
+---
+export const prerender = false;
+import { ClientRouter } from 'astro:transitions';
+import '../styles/global.css';
+import AppHeader from '../components/AppHeader.astro';
+import MeetingDashboard from '../components/MeetingDashboard.svelte';
+import StatusBar from '../components/StatusBar.svelte';
+import GoogleOneTap from '../components/GoogleOneTap.astro';
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#8b4513">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Planning Meeting &mdash; Think &rarr; Done</title>
+  <link rel="canonical" href="https://think-done.com/meeting">
+  <link rel="icon" type="image/png" href="/favicon-32.png" sizes="32x32">
+  <link rel="icon" type="image/png" href="/favicon.png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="preload" href="/fonts/caveat-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/patrick-hand-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/ibm-plex-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <!-- <link rel="manifest" href="/manifest.json"> -->
+  <ClientRouter />
+</head>
+<body class="meeting-body">
+  <AppHeader transition:name="header" transition:animate="none" />
+  <div class="meeting-fill" transition:name="content" transition:animate="slide">
+    <MeetingDashboard client:load />
+  </div>
+  <StatusBar client:load transition:persist />
+  <GoogleOneTap />
+</body>
+</html>
+
+<style is:global>
+  .meeting-body {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    background-color: var(--color-paper);
+    background-image: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 23px,
+      rgba(74,127,181,0.03) 23px,
+      rgba(74,127,181,0.03) 24px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 23px,
+      rgba(74,127,181,0.03) 23px,
+      rgba(74,127,181,0.03) 24px
+    );
+  }
+  .meeting-body {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .meeting-body::-webkit-scrollbar {
+    display: none;
+  }
+  .meeting-fill {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding-bottom: 28px;
+  }
+</style>

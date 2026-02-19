@@ -18,6 +18,7 @@
   let inputText = '';
   let inputFocused = false;
   let chatArea;
+  let textareaEl;
 
   // ── Audio / TTS state ──
   let audioEnabled = false;
@@ -208,17 +209,27 @@
     finishPacing();
   }
 
+  function compact(text) {
+    return text.replace(/\n{2,}/g, '\n');
+  }
+
   function displayText(msg, idx) {
     // S2S mode: no pacing, transcripts arrive after audio
-    if (s2sMode) return msg.text;
+    if (s2sMode) return compact(msg.text);
     // Only pace the last AI message while actively streaming with audio on
     if (audioEnabled && streaming && idx === messages.length - 1 && msg.role === 'ai') {
-      return pacedText;
+      return compact(pacedText);
     }
-    return msg.text;
+    return compact(msg.text);
   }
 
   // ── Input handlers ──
+  function autoResize() {
+    if (!textareaEl) return;
+    textareaEl.style.height = 'auto';
+    textareaEl.style.height = Math.min(textareaEl.scrollHeight, 150) + 'px';
+  }
+
   function handleSend() {
     const text = inputText.trim();
     if (!text || streaming) return;
@@ -229,6 +240,7 @@
     speaking = false;
     dispatch('send', { text });
     inputText = '';
+    if (textareaEl) textareaEl.style.height = 'auto';
   }
 
   function handleKeydown(e) {
@@ -269,18 +281,21 @@
 
 <div class="chat-wrap">
   <div class="chat-area" role="log" aria-label="Meeting conversation" aria-live="polite" bind:this={chatArea}>
-    {#if messages.length === 0 && !streaming}
-      <div class="empty-chat" role="status">
-        <div class="empty-icon" aria-hidden="true">&#9788;</div>
-        <div class="empty-text">Start your planning session</div>
-        <div class="empty-hint">Type a message or say "Good morning" to begin</div>
+    {#if messages.length === 0 && !streaming && !liveAiTranscript && !liveUserTranscript}
+      <div class="ghost-messages" aria-label="Conversation preview">
+        <div class="message ai ghost">
+          <div class="message-bubble">Good morning! I've reviewed your projects and have a few items to discuss. Ready to plan your day?</div>
+        </div>
+        <div class="message user ghost">
+          <div class="message-bubble">Let's do it. I have a call at 2pm today.</div>
+        </div>
+        <div class="message ai ghost">
+          <div class="message-bubble">Got it — I'll block that out. Let's start with your top priorities and work around the 2pm call.</div>
+        </div>
       </div>
     {/if}
     {#each messages as msg, idx}
       <div class="message {msg.role}" role="article" aria-label="{msg.role === 'ai' ? 'Assistant' : 'You'} said">
-        {#if idx === 0 && msg.role === 'ai'}
-          <div class="message-sender" aria-hidden="true">PLANNING SESSION</div>
-        {/if}
         <div class="message-bubble">{displayText(msg, idx)}</div>
       </div>
     {/each}
@@ -303,28 +318,7 @@
     {/if}
   </div>
 
-  <button
-    class="audio-toggle"
-    class:active={audioEnabled}
-    class:speaking
-    class:hidden={s2sMode}
-    on:click={toggleAudio}
-    aria-label={audioEnabled ? 'Turn off audio' : 'Turn on audio'}
-    aria-pressed={audioEnabled}
-    title={audioEnabled ? 'Audio on' : 'Audio off'}
-  >
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      {#if audioEnabled}
-        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none" />
-        <path d="M15.54 8.46a5 5 0 010 7.07" />
-        <path d="M19.07 4.93a10 10 0 010 14.14" />
-      {:else}
-        <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" fill="currentColor" stroke="none" />
-        <line x1="23" y1="9" x2="17" y2="15" />
-        <line x1="17" y1="9" x2="23" y2="15" />
-      {/if}
-    </svg>
-  </button>
+
 </div>
 
 <div class="input-area" role="form" aria-label="Message input">
@@ -333,18 +327,20 @@
   </div>
   <div class="input-bar" class:focused={inputFocused} class:disabled={streaming}>
     <label for="chat-input" class="sr-only">Message</label>
-    <input
+    <textarea
       id="chat-input"
-      type="text"
       class="text-input"
+      rows="1"
       placeholder={streaming ? "Thinking..." : voiceActive ? "Listening..." : "Message..."}
       bind:value={inputText}
+      bind:this={textareaEl}
       on:keydown={handleKeydown}
+      on:input={autoResize}
       on:focus={() => inputFocused = true}
       on:blur={() => inputFocused = false}
       disabled={streaming}
       aria-describedby={streaming ? 'chat-status' : undefined}
-    />
+    ></textarea>
     {#if streaming}<span id="chat-status" class="sr-only">Assistant is generating a response</span>{/if}
     <button
       class="send-btn"
@@ -385,49 +381,6 @@
   }
   .chat-area::-webkit-scrollbar { display: none; }
 
-  /* ── Audio toggle ── */
-  .audio-toggle {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    border: 1.5px solid var(--color-ink-muted);
-    background: color-mix(in srgb, var(--color-paper-bright) 90%, transparent);
-    backdrop-filter: blur(6px);
-    color: var(--color-ink-muted);
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    transition: all 0.2s;
-    z-index: 2;
-  }
-  .audio-toggle svg {
-    width: 16px;
-    height: 16px;
-  }
-  .audio-toggle:hover {
-    border-color: var(--color-ink-muted);
-    color: var(--color-ink-muted);
-    background: var(--color-paper-bright);
-  }
-  .audio-toggle.active {
-    border-color: var(--color-gold);
-    color: var(--color-gold);
-    background: color-mix(in srgb, var(--color-gold) 8%, var(--color-paper-bright));
-  }
-  .audio-toggle.hidden { display: none; }
-  .audio-toggle.active.speaking {
-    animation: speak-pulse 1.2s ease-in-out infinite;
-  }
-  @keyframes speak-pulse {
-    0%, 100% { box-shadow: 0 0 0 0 transparent; }
-    50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-gold) 15%, transparent); }
-  }
-
   .sr-only {
     position: absolute;
     width: 1px;
@@ -440,54 +393,33 @@
     border: 0;
   }
 
-  /* ── Empty state ── */
-  .empty-chat {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100%;
-    gap: 8px;
+  /* ── Ghost placeholder messages ── */
+  .ghost-messages {
+    opacity: 0.3;
+    pointer-events: none;
   }
-  .empty-icon {
-    font-size: 48px;
-    color: var(--color-gold);
-  }
-  .empty-text {
-    font-family: var(--font-display);
-    font-size: 20px;
-    color: var(--color-ink);
-  }
-  .empty-hint {
-    font-family: var(--font-hand);
-    font-size: 14px;
-    color: var(--color-ink-light);
+  .message.ghost .message-bubble {
+    box-shadow: none;
   }
 
   /* ── Messages ── */
   .message {
-    margin-bottom: 20px;
+    margin-bottom: 4px;
     display: flex;
     flex-direction: column;
   }
   .message.ai { align-items: flex-start; }
   .message.user { align-items: flex-end; }
-  .message-sender {
-    font-family: var(--font-display);
-    font-size: 14px;
-    margin-bottom: 4px;
-    color: var(--color-ink-muted);
-  }
   .message-bubble {
     max-width: 70%;
-    padding: 14px 18px;
+    padding: 10px 14px;
     border-radius: 12px;
     background: var(--color-paper-bright);
     box-shadow: 2px 2px 8px rgba(0,0,0,0.08);
-    line-height: 1.6;
-    font-size: 15px;
+    line-height: 1.45;
+    font-size: 14px;
     color: var(--color-ink);
-    white-space: pre-wrap;
+    white-space: pre-line;
   }
   .message.ai .message-bubble { border-bottom-left-radius: 4px; }
   .message.user .message-bubble {
@@ -527,7 +459,7 @@
   .input-area {
     padding: 12px 16px;
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     gap: 10px;
     border-top: 1px solid var(--color-rule);
     background: var(--color-paper);
@@ -535,7 +467,7 @@
   .input-bar {
     flex: 1;
     display: flex;
-    align-items: center;
+    align-items: flex-end;
     gap: 0;
     border: 1.5px solid var(--color-ink-faint);
     border-radius: 22px;
@@ -560,6 +492,10 @@
     color: var(--color-ink);
     outline: none;
     min-width: 0;
+    resize: none;
+    overflow-y: auto;
+    line-height: 1.4;
+    max-height: 150px;
   }
   .text-input::placeholder {
     color: var(--color-ink-muted);

@@ -1,0 +1,23 @@
+---
+interface Props {
+  articles: Array<{ title: string; description: string; type: string; heroImage?: string; author: { name: string; avatar: string }; publishedAt: string; readingTime?: string; slug: string; }>;
+  heading?: string;
+}
+import ArticleCard from './ArticleCard.astro';
+const { articles, heading = 'Keep Reading' } = Astro.props;
+const shown = articles.slice(0, 3);
+---
+{shown.length > 0 && (
+  <section class="keep-reading-section blog-reveal" data-reveal="scale">
+    <div class="keep-reading-glow"></div>
+    <div class="keep-reading-inner">
+      <div class="keep-reading-header">
+        <span class="keep-reading-bar"></span>
+        <h2 class="keep-reading-title">{heading}</h2>
+      </div>
+      <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-6 pt-3">
+        {shown.map(article => <ArticleCard {...article} />)}
+      </div>
+    </div>
+  </section>
+)}

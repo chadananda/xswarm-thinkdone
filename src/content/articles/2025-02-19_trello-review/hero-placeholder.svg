@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="600" viewBox="0 0 1400 600">
+  <rect fill="#f4efe6" width="1400" height="600"/>
+  <!-- Trello board background -->
+  <rect fill="#0079bf" opacity="0.2" x="100" y="80" width="1200" height="440" rx="8"/>
+  <!-- Column 1: To Do -->
+  <rect fill="#fffdf8" x="140" y="120" width="280" height="400" rx="6" stroke="#c4b5a0" stroke-width="1"/>
+  <text x="280" y="155" font-family="sans-serif" font-size="16" fill="#3a3226" text-anchor="middle" font-weight="bold">To Do</text>
+  <rect fill="#f8f6f4" x="160" y="180" width="240" height="80" rx="4" stroke="#d5cec3" stroke-width="1"/>
+  <text x="280" y="205" font-family="sans-serif" font-size="13" fill="#3a3226" text-anchor="middle">User Research</text>
+  <rect fill="#c69c3f" opacity="0.3" x="170" y="220" width="60" height="20" rx="10"/>
+  <text x="200" y="235" font-family="sans-serif" font-size="11" fill="#3a3226" text-anchor="middle">Design</text>
+  <rect fill="#f8f6f4" x="160" y="275" width="240" height="80" rx="4" stroke="#d5cec3" stroke-width="1"/>
+  <text x="280" y="300" font-family="sans-serif" font-size="13" fill="#3a3226" text-anchor="middle">Database Schema</text>
+  <rect fill="#2d4a2e" opacity="0.3" x="170" y="315" width="50" height="20" rx="10"/>
+  <text x="195" y="330" font-family="sans-serif" font-size="11" fill="#3a3226" text-anchor="middle">Dev</text>
+  <rect fill="#f8f6f4" x="160" y="370" width="240" height="80" rx="4" stroke="#d5cec3" stroke-width="1"/>
+  <text x="280" y="395" font-family="sans-serif" font-size="13" fill="#3a3226" text-anchor="middle">Write Documentation</text>
+  <!-- Column 2: In Progress -->
+  <rect fill="#fffdf8" x="460" y="120" width="280" height="400" rx="6" stroke="#c4b5a0" stroke-width="1"/>
+  <text x="600" y="155" font-family="sans-serif" font-size="16" fill="#3a3226" text-anchor="middle" font-weight="bold">In Progress</text>
+  <rect fill="#f8f6f4" x="480" y="180" width="240" height="80" rx="4" stroke="#d5cec3" stroke-width="1"/>
+  <text x="600" y="205" font-family="sans-serif" font-size="13" fill="#3a3226" text-anchor="middle">Build API Endpoints</text>
+  <circle cx="490" cy="240" r="12" fill="#7a6a5a">
+    <title>Avatar</title>
+  </circle>
+  <rect fill="#0079bf" opacity="0.3" x="490" y="220" width="40" height="20" rx="10"/>
+  <text x="510" y="235" font-family="sans-serif" font-size="11" fill="#3a3226" text-anchor="middle">API</text>
+  <rect fill="#f8f6f4" x="480" y="275" width="240" height="80" rx="4" stroke="#d5cec3" stroke-width="1"/>
+  <text x="600" y="300" font-family="sans-serif" font-size="13" fill="#3a3226" text-anchor="middle">UI Mockups</text>
+  <circle cx="490" cy="335" r="12" fill="#c69c3f"/>
+  <!-- Column 3: Done -->
+  <rect fill="#fffdf8" x="780" y="120" width="280" height="400" rx="6" stroke="#c4b5a0" stroke-width="1"/>
+  <text x="920" y="155" font-family="sans-serif" font-size="16" fill="#3a3226" text-anchor="middle" font-weight="bold">Done</text>
+  <rect fill="#f8f6f4" x="800" y="180" width="240" height="80" rx="4" stroke="#d5cec3" stroke-width="1"/>
+  <text x="920" y="205" font-family="sans-serif" font-size="13" fill="#7a6a5a" text-anchor="middle">Project Setup</text>
+  <path d="M 810 235 L 830 235 L 820 220 Z" fill="#2d4a2e" opacity="0.6"/>
+  <rect fill="#f8f6f4" x="800" y="275" width="240" height="80" rx="4" stroke="#d5cec3" stroke-width="1"/>
+  <text x="920" y="300" font-family="sans-serif" font-size="13" fill="#7a6a5a" text-anchor="middle">Wireframes</text>
+  <circle cx="1010" cy="310" r="15" fill="#2d4a2e" opacity="0.3"/>
+  <path d="M 1004 310 L 1008 314 L 1016 305" fill="none" stroke="#2d4a2e" stroke-width="2"/>
+  <!-- Decorative element - Trello logo style -->
+  <rect fill="#0079bf" x="1120" y="180" width="120" height="140" rx="8" opacity="0.4"/>
+  <rect fill="#fffdf8" x="1140" y="200" width="35" height="80" rx="4"/>
+  <rect fill="#fffdf8" x="1185" y="200" width="35" height="100" rx="4"/>
+</svg>

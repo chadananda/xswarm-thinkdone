@@ -1,0 +1,57 @@
+---
+import { ClientRouter } from 'astro:transitions';
+import '../styles/global.css';
+import AppHeader from '../components/AppHeader.astro';
+import StatusBar from '../components/StatusBar.svelte';
+import GoogleOneTap from '../components/GoogleOneTap.astro';
+
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#8b4513">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>{title} &mdash; Think &rarr; Done</title>
+  <link rel="canonical" href={`https://think-done.com${Astro.url.pathname}`}>
+  <link rel="icon" type="image/png" href="/favicon-32.png" sizes="32x32">
+  <link rel="icon" type="image/png" href="/favicon.png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="preload" href="/fonts/caveat-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/patrick-hand-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/ibm-plex-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <!-- <link rel="manifest" href="/manifest.json"> -->
+  <ClientRouter />
+  <slot name="head" />
+</head>
+<body>
+  <AppHeader transition:name="header" transition:animate="none" />
+  <div transition:name="content" transition:animate="slide">
+    <slot />
+  </div>
+  <StatusBar client:load transition:persist />
+  <GoogleOneTap />
+</body>
+</html>
+
+<style is:global>
+  html, body {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  body {
+    padding-bottom: 32px;
+  }
+  html::-webkit-scrollbar,
+  body::-webkit-scrollbar {
+    display: none;
+  }
+</style>

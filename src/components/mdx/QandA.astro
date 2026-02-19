@@ -1,0 +1,12 @@
+---
+interface Props {
+  question: string;
+}
+const { question } = Astro.props;
+---
+<div class="qanda blog-reveal">
+  <p class="font-display font-bold text-xl text-forest-dark mb-2 leading-snug">{question}</p>
+  <div class="font-hand text-ink-light text-base leading-relaxed [&>p]:m-0 [&>p:not(:last-child)]:mb-2">
+    <slot />
+  </div>
+</div>

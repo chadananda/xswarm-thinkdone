@@ -1,14 +1,15 @@
+<svelte:options runes={false} />
+
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { flip } from 'svelte/animate';
   import { playApplause, playClick, playDrop, playPoof } from '../lib/sounds.js';
-
-  export let initialTasks = [];
-  export let initialDate = '';
+  import { getDb, ensureSchema, getTasks, addTask as dbAddTask, toggleTask as dbToggleTask, deleteTask as dbDeleteTask, editTask as dbEditTask, reorderTasks as dbReorderTasks } from '../lib/db.js';
   export let userName = '';
-
-  let tasks = initialTasks;
-  let date = initialDate;
+  let tasks = [];
+  let date = '';
+  let loading = true;
+  let db = null;
   let busy = false;
   let editIdx = -1;
   let editVal = '';
@@ -22,18 +23,21 @@
   let dragIdx = -1;
   let menuIdx = -1;
   let menuTimer = null;
-  let poll;
-  let deletingText = null;
-  let justAddedText = null;
+  let deletingId = null;
+  let justAddedId = null;
   let infoIdx = -1;
   let undoTask = null;
   let undoTimer = null;
   let swipeX = 0;
   let swipeIdx = -1;
   let swipeDelta = 0;
-
   const WORK_HOURS = 8;
-
+  function todayStr() {
+    return new Date().toISOString().slice(0, 10);
+  }
+  function todayDisplay() {
+    return new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  }
   function parseTask(text) {
     let minutes = 0;
     let clean = text;
@@ -47,7 +51,6 @@
     const project = projMatch ? projMatch[2] : '';
     return { label, project, minutes };
   }
-
   function formatTime(mins) {
     if (mins >= 60) {
       const h = Math.floor(mins / 60);
@@ -56,7 +59,6 @@
     }
     return `${mins}m`;
   }
-
   function dayBreaks(taskList) {
     let total = 0;
     const limit = WORK_HOURS * 60;
@@ -73,43 +75,25 @@
     }
     return breaks;
   }
-
   function dayLabel(daysFromNow) {
     const d = new Date();
     d.setDate(d.getDate() + daysFromNow);
     return d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
   }
-
-  async function fetchTasks() {
-    if (busy || editIdx >= 0 || dragIdx >= 0) return;
-    try {
-      const r = await fetch('/api/tasks');
-      const d = await r.json();
-      if (!busy && editIdx < 0 && dragIdx < 0) { tasks = d.tasks; date = d.date; }
-    } catch {}
+  async function refreshTasks() {
+    if (!db) return;
+    tasks = await getTasks(db, todayStr());
+    date = todayDisplay();
   }
-
-  async function api(action, data = {}) {
-    const r = await fetch('/api/tasks', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, ...data }),
-    });
-    return r.json();
-  }
-
-  async function toggle(text) {
+  async function toggle(task) {
     busy = true;
     menuIdx = -1;
-    const task = tasks.find(t => t.text === text);
-    const willCheck = task && !task.checked;
-    const r = await api('toggle', { task: text });
-    if (r.result === 'checked') playApplause();
-    else if (r.result === 'unchecked') playClick();
-    await fetchTasks();
+    const result = await dbToggleTask(db, task.id);
+    if (result === 'checked') playApplause();
+    else if (result === 'unchecked') playClick();
+    await refreshTasks();
     busy = false;
   }
-
   function openAdd() {
     showAdd = true;
     newTask = '';
@@ -121,7 +105,6 @@
       if (input) input.focus();
     }, 10);
   }
-
   async function add() {
     let label = newTask.trim();
     if (!label) return;
@@ -131,57 +114,51 @@
     if (proj) label += ` — ${proj}`;
     busy = true;
     showAdd = false;
-    justAddedText = label;
-    await api('add', { task: label });
+    const newId = await dbAddTask(db, label, { planDate: todayStr() });
+    justAddedId = Number(newId);
     newTask = '';
     newMins = '';
     newProject = '';
     newCustomProject = '';
     playDrop();
-    await fetchTasks();
+    await refreshTasks();
     busy = false;
-    // Clear animation class after it plays
-    setTimeout(() => { justAddedText = null; }, 400);
+    setTimeout(() => { justAddedId = null; }, 400);
   }
-
-  async function del(text) {
+  async function del(task) {
     menuIdx = -1;
     editIdx = -1;
-    deletingText = text;
+    deletingId = task.id;
     playPoof();
     await new Promise(r => setTimeout(r, 400));
-    // Remove from local list immediately but delay server delete for undo
-    const removed = tasks.find(t => t.text === text);
-    tasks = tasks.filter(t => t.text !== text);
-    deletingText = null;
+    // Remove from local list immediately but delay db delete for undo
+    const removed = tasks.find(t => t.id === task.id);
+    tasks = tasks.filter(t => t.id !== task.id);
+    deletingId = null;
     if (!removed) return;
     // Cancel any previous undo
     if (undoTimer) { clearTimeout(undoTimer); }
     undoTask = removed;
     undoTimer = setTimeout(async () => {
-      // Actually delete on server
       busy = true;
-      await api('delete', { task: text });
+      await dbDeleteTask(db, removed.id);
       undoTask = null;
       undoTimer = null;
-      await fetchTasks();
+      await refreshTasks();
       busy = false;
     }, 3000);
   }
-
   async function undo() {
     if (!undoTask || !undoTimer) return;
     clearTimeout(undoTimer);
     const task = undoTask;
     undoTask = null;
     undoTimer = null;
-    // Re-add locally (will sync on next poll)
+    // Re-add locally (will be consistent since we never deleted from db)
     tasks = [task, ...tasks.filter(t => !t.checked), ...tasks.filter(t => t.checked)];
     playDrop();
   }
-
   $: projects = [...new Set(tasks.map(t => parseTask(t.text).project).filter(Boolean))].sort();
-
   function startEdit(i, text) {
     menuIdx = -1;
     editIdx = i;
@@ -194,8 +171,7 @@
       if (input) { input.focus(); input.select(); }
     }, 10);
   }
-
-  async function saveEdit(oldText) {
+  async function saveEdit(task) {
     let label = editVal.trim();
     if (!label) { editIdx = -1; return; }
     const mins = parseInt(editMins);
@@ -203,19 +179,17 @@
     if (mins > 0) newText += ` ~${mins}m`;
     if (editProject) newText += ` — ${editProject}`;
     editIdx = -1;
-    if (newText === oldText) return;
+    if (newText === task.text) return;
     busy = true;
-    await api('edit', { oldTask: oldText, newTask: newText });
-    await fetchTasks();
+    await dbEditTask(db, task.id, newText);
+    await refreshTasks();
     busy = false;
   }
-
   function toggleMenu(i) {
     clearTimeout(menuTimer);
     menuIdx = menuIdx === i ? -1 : i;
     infoIdx = -1;
   }
-
   let infoTimer;
   function toggleInfo(i) {
     clearTimeout(infoTimer);
@@ -228,31 +202,25 @@
   function cancelInfoDismiss() {
     clearTimeout(infoTimer);
   }
-
   function startMenuDismiss() {
     menuTimer = setTimeout(() => { menuIdx = -1; }, 2000);
   }
-
   function cancelMenuDismiss() {
     clearTimeout(menuTimer);
   }
-
   // Pointer-based drag reordering (replaces HTML5 drag API)
   let dragClone = null;
   let dragOffsetY = 0;
-
   function onDragPointerDown(e, i) {
     if (e.button !== 0) return;
     if (e.target.closest('input, button, select, a, .edit-card, .info-popup, .menu-popup')) return;
     e.preventDefault();
     menuIdx = -1;
     infoIdx = -1;
-
     const wrap = e.currentTarget;
     const rect = wrap.getBoundingClientRect();
     dragOffsetY = e.clientY - rect.top;
     dragIdx = i;
-
     // Create floating clone
     dragClone = wrap.cloneNode(true);
     Object.assign(dragClone.style, {
@@ -269,21 +237,17 @@
       background: 'var(--color-paper-bright)',
     });
     document.body.appendChild(dragClone);
-
     window.addEventListener('pointermove', onDragPointerMove);
     window.addEventListener('pointerup', onDragPointerUp);
   }
-
   function onDragPointerMove(e) {
     if (dragIdx < 0 || !dragClone) return;
     e.preventDefault();
     dragClone.style.top = (e.clientY - dragOffsetY) + 'px';
-
     // Find target index by comparing cursor to item midpoints
     const wraps = document.querySelectorAll('.task-wrap');
     const centerY = e.clientY;
     let targetIdx = dragIdx;
-
     for (let j = dragIdx - 1; j >= 0; j--) {
       const r = wraps[j].getBoundingClientRect();
       if (centerY < r.top + r.height / 2) targetIdx = j;
@@ -296,7 +260,6 @@
         else break;
       }
     }
-
     if (targetIdx !== dragIdx) {
       const arr = [...tasks];
       const [item] = arr.splice(dragIdx, 1);
@@ -305,18 +268,16 @@
       dragIdx = targetIdx;
     }
   }
-
-  function onDragPointerUp() {
+  async function onDragPointerUp() {
     window.removeEventListener('pointermove', onDragPointerMove);
     window.removeEventListener('pointerup', onDragPointerUp);
     if (dragClone) { dragClone.remove(); dragClone = null; }
     if (dragIdx >= 0) {
       playDrop();
-      api('reorder', { tasks });
+      await dbReorderTasks(db, tasks.map(t => t.id));
     }
     dragIdx = -1;
   }
-
   // Swipe-to-complete (mobile)
   function onSwipeStart(e, i) {
     if (e.touches.length !== 1) return;
@@ -332,12 +293,11 @@
   function onSwipeEnd() {
     if (swipeIdx >= 0 && swipeDelta > 80) {
       const task = tasks[swipeIdx];
-      if (task) toggle(task.text);
+      if (task) toggle(task);
     }
     swipeIdx = -1;
     swipeDelta = 0;
   }
-
   function onWindowClick(e) {
     if (menuIdx >= 0 && !e.target.closest('.menu-wrap')) {
       menuIdx = -1;
@@ -349,28 +309,25 @@
       editIdx = -1;
     }
   }
-
   function onKeydown(e) {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
     if (e.key === 'n' && !showAdd) { e.preventDefault(); openAdd(); }
   }
-
-  onMount(() => {
-    if (!tasks.length && !date) fetchTasks();
-    poll = setInterval(fetchTasks, 3000);
+  onMount(async () => {
+    db = await getDb();
+    await ensureSchema(db);
+    await refreshTasks();
+    loading = false;
     window.addEventListener('click', onWindowClick);
     window.addEventListener('keydown', onKeydown);
   });
-
   onDestroy(() => {
-    clearInterval(poll);
     if (undoTimer) clearTimeout(undoTimer);
     if (typeof window !== 'undefined') {
       window.removeEventListener('click', onWindowClick);
       window.removeEventListener('keydown', onKeydown);
     }
   });
-
   $: breaks = dayBreaks(tasks);
   $: firstBreak = Object.keys(breaks).length ? Math.min(...Object.keys(breaks).map(Number)) : -1;
   $: doneCount = tasks.filter(t => t.checked).length;
@@ -379,26 +336,30 @@
   $: nextUpIdx = tasks.findIndex(t => !t.checked);
 </script>
 
-{#if date}
+<div style="view-transition-name: task-list">
+{#if loading}
+  <div class="empty" role="status" aria-label="Loading tasks"><span class="empty-icon" aria-hidden="true">&#9203;</span><p>Loading...</p></div>
+{:else if date}
   <div class="date-row">
     <span class="date">{date}</span>
     {#if totalCount > 0}
-      <span class="progress">{doneCount}/{totalCount}</span>
+      <span class="progress" aria-label="{doneCount} of {totalCount} tasks complete">{doneCount}/{totalCount}</span>
     {/if}
   </div>
 {/if}
 
-{#if tasks.length === 0}
-  <div class="empty">
-    <span class="empty-icon">&#128161;</span>
+{#if !loading && tasks.length === 0}
+  <div class="empty" role="status">
+    <span class="empty-icon" aria-hidden="true">&#128161;</span>
     <p>Start a planning meeting to begin your day.</p>
   </div>
-{:else}
-  <div class="task-list" class:list-dragging={dragIdx >= 0}>
-    {#each tasks as task, i (task.text)}
+{:else if !loading}
+  <div class="task-list" class:list-dragging={dragIdx >= 0} role="list" aria-label="Task list">
+    {#each tasks as task, i (task.id)}
       {@const parsed = parseTask(task.text)}
       <div
         class="task-wrap"
+        role="listitem"
         animate:flip={{ duration: 200 }}
         on:pointerdown={(e) => onDragPointerDown(e, i)}
         on:touchstart={(e) => onSwipeStart(e, i)}
@@ -406,12 +367,12 @@
         on:touchend={onSwipeEnd}
       >
         {#if task.checked && i === firstDoneIdx && firstDoneIdx > 0}
-          <div class="done-separator">
-            <span class="done-label">completed</span>
+          <div class="done-separator" role="separator" aria-label="Completed tasks">
+            <span class="done-label" aria-hidden="true">completed</span>
           </div>
         {/if}
         {#if breaks[i] && !task.checked}
-          <div class="day-break">{dayLabel(breaks[i])}</div>
+          <div class="day-break" role="separator" aria-label="Overflows to {dayLabel(breaks[i])}">{dayLabel(breaks[i])}</div>
         {/if}
         <div
           class="task"
@@ -421,32 +382,34 @@
           class:dragging={dragIdx === i}
           class:info-open={infoIdx === i}
           class:menu-open={menuIdx === i}
-          class:deleting={deletingText === task.text}
-          class:just-added={justAddedText === task.text}
+          class:deleting={deletingId === task.id}
+          class:just-added={justAddedId === task.id}
           class:swiping={swipeIdx === i && swipeDelta > 10}
           style={swipeIdx === i && swipeDelta > 10 ? `transform: translateX(${Math.min(swipeDelta, 120)}px); opacity: ${1 - swipeDelta / 200}` : ''}
         >
         <input
           type="checkbox"
           checked={task.checked}
-          on:change={() => toggle(task.text)}
+          on:change={() => toggle(task)}
+          aria-label="{task.checked ? 'Mark incomplete' : 'Mark complete'}: {parsed.label}"
         />
         {#if editIdx === i}
-          <div class="edit-card">
+          <div class="edit-card" role="form" aria-label="Edit task: {parsed.label}">
             <input
               class="edit-input"
               type="text"
               bind:value={editVal}
+              aria-label="Task name"
               on:keydown={(e) => {
-                if (e.key === 'Enter') saveEdit(task.text);
+                if (e.key === 'Enter') saveEdit(task);
                 if (e.key === 'Escape') editIdx = -1;
               }}
             />
             <div class="edit-row">
-              <div class="time-group">
+              <div class="time-group" role="group" aria-label="Time estimate">
                 <div class="time-presets">
                   {#each [5, 15, 30, 60, 120] as m}
-                    <button class="preset-btn" class:active={editMins === String(m)} on:mousedown|preventDefault={() => { editMins = String(m); }}>
+                    <button class="preset-btn" class:active={editMins === String(m)} aria-pressed={editMins === String(m)} aria-label="{m >= 60 ? `${m/60} hour` : `${m} minutes`}" on:mousedown|preventDefault={() => { editMins = String(m); }}>
                       {m >= 60 ? `${m/60}h` : `${m}m`}
                     </button>
                   {/each}
@@ -463,9 +426,9 @@
               </label>
             </div>
             <div class="edit-actions">
-              <button class="edit-card-btn save-btn" on:mousedown|preventDefault={() => saveEdit(task.text)}>Save</button>
+              <button class="edit-card-btn save-btn" on:mousedown|preventDefault={() => saveEdit(task)}>Save</button>
               <button class="edit-card-btn cancel-btn" on:mousedown|preventDefault={() => { editIdx = -1; }}>Cancel</button>
-              <button class="edit-card-btn del-btn" on:mousedown|preventDefault={() => del(task.text)}>Delete</button>
+              <button class="edit-card-btn del-btn" on:mousedown|preventDefault={() => del(task)}>Delete</button>
             </div>
           </div>
         {:else}
@@ -499,8 +462,8 @@
             {/if}
           </span>
           <div class="info-wrap" on:mouseenter={cancelInfoDismiss} on:mouseleave={startInfoDismiss}>
-            <button class="info-btn" on:click|stopPropagation={() => toggleInfo(i)} title="Task info">
-              <svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+            <button class="info-btn" on:click|stopPropagation={() => toggleInfo(i)} title="Task info" aria-label="Task details for {parsed.label}" aria-expanded={infoIdx === i} aria-haspopup="true">
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
                 <circle cx="8" cy="8" r="6.5"/><path d="M8 7v4"/><circle cx="8" cy="5" r="0.5" fill="currentColor" stroke="none"/>
               </svg>
             </button>
@@ -522,16 +485,16 @@
             {/if}
           </div>
           <div class="menu-wrap" on:mouseenter={cancelMenuDismiss} on:mouseleave={startMenuDismiss}>
-            <button class="menu-btn" on:click|stopPropagation={() => toggleMenu(i)} title="Options">
-              <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/></svg>
+            <button class="menu-btn" on:click|stopPropagation={() => toggleMenu(i)} title="Options" aria-label="Options for {parsed.label}" aria-expanded={menuIdx === i} aria-haspopup="menu">
+              <svg aria-hidden="true" width="18" height="18" viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="3" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="13" r="1.5"/></svg>
             </button>
             {#if menuIdx === i}
-              <div class="menu-popup">
-                <button class="menu-item" on:click|stopPropagation={() => startEdit(i, task.text)}>
-                  <span class="mi-icon">&#9998;</span> Edit
+              <div class="menu-popup" role="menu" aria-label="Task actions">
+                <button class="menu-item" role="menuitem" on:click|stopPropagation={() => startEdit(i, task.text)}>
+                  <span class="mi-icon" aria-hidden="true">&#9998;</span> Edit
                 </button>
-                <button class="menu-item menu-item-danger" on:click|stopPropagation={() => del(task.text)}>
-                  <span class="mi-icon">&times;</span> Delete
+                <button class="menu-item menu-item-danger" role="menuitem" on:click|stopPropagation={() => del(task)}>
+                  <span class="mi-icon" aria-hidden="true">&times;</span> Delete
                 </button>
               </div>
             {/if}
@@ -543,10 +506,12 @@
   </div>
 {/if}
 
-{#if showAdd}
-  <div class="add-overlay" on:click|self={() => { showAdd = false; }}></div>
-  <div class="add-popup">
+{#if !loading && showAdd}
+  <div class="add-overlay" on:click|self={() => { showAdd = false; }} role="presentation"></div>
+  <div class="add-popup" role="dialog" aria-label="Add new task" aria-modal="true">
+    <label for="add-task-input" class="sr-only">Task description</label>
     <input
+      id="add-task-input"
       class="add-text-input"
       type="text"
       placeholder="What needs to be done?"
@@ -593,16 +558,19 @@
   </div>
 {/if}
 
-<button class="fab" on:click={openAdd} aria-label="Add task (N)">
-  <svg width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="11" y1="4" x2="11" y2="18"/><line x1="4" y1="11" x2="18" y2="11"/></svg>
-</button>
+{#if !loading}
+  <button class="fab" on:click={openAdd} aria-label="Add task (N)">
+    <svg aria-hidden="true" width="22" height="22" viewBox="0 0 22 22" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round"><line x1="11" y1="4" x2="11" y2="18"/><line x1="4" y1="11" x2="18" y2="11"/></svg>
+  </button>
+{/if}
 
 {#if undoTask}
-  <div class="undo-toast">
+  <div class="undo-toast" role="alert" aria-live="assertive">
     <span>Deleted &ldquo;{undoTask.text.length > 30 ? undoTask.text.slice(0, 30) + '...' : undoTask.text}&rdquo;</span>
     <button class="undo-btn" on:click={undo}>Undo</button>
   </div>
 {/if}
+</div>
 
 <style>
   .date-row {
@@ -628,15 +596,26 @@
     letter-spacing: 0.5px;
     font-weight: 500;
   }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
   .day-break {
     font-family: var(--font-ui);
-    font-size: 0.65rem;
-    color: var(--color-ink-faint);
+    font-size: 0.7rem;
+    color: var(--color-ink-light);
     text-transform: uppercase;
     letter-spacing: 1px;
     margin: 0.4rem 0 0.1rem;
     padding-top: 0.2rem;
-    border-top: 1px dashed var(--color-ink-faint);
+    border-top: 1px dashed var(--color-ink-muted);
   }
   .done-separator {
     display: flex;
@@ -651,8 +630,8 @@
   }
   .done-label {
     font-family: var(--font-ui);
-    font-size: 0.6rem;
-    color: var(--color-ink-faint);
+    font-size: 0.65rem;
+    color: var(--color-ink-muted);
     text-transform: uppercase;
     letter-spacing: 1px;
     flex-shrink: 0;
@@ -948,8 +927,8 @@
   }
   .info-raw {
     font-family: var(--font-ui);
-    font-size: 0.6rem;
-    color: var(--color-ink-faint);
+    font-size: 0.65rem;
+    color: var(--color-ink-muted);
     margin-top: 6px;
     padding-top: 4px;
     border-top: 1px dashed var(--color-ink-faint);
@@ -1077,7 +1056,7 @@
     text-align: center;
   }
   .time-input:focus { border-color: var(--color-gold); }
-  .time-input::placeholder { color: var(--color-ink-faint); }
+  .time-input::placeholder { color: var(--color-ink-muted); }
 
   .edit-actions {
     display: flex;
@@ -1245,7 +1224,7 @@
     color: var(--color-ink);
     margin-bottom: 8px;
   }
-  .add-text-input::placeholder { color: var(--color-ink-faint); }
+  .add-text-input::placeholder { color: var(--color-ink-muted); }
   .add-fields {
     display: flex;
     align-items: center;

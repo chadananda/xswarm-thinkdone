@@ -1,0 +1,10 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /app
+Disallow: /meeting
+Disallow: /settings
+Disallow: /tasks
+Disallow: /usage
+
+Sitemap: https://think-done.com/sitemap-index.xml

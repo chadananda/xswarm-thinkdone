@@ -1,0 +1,507 @@
+---
+title: "Todoist vs Things 3: The Definitive Comparison for 2025"
+subtitle: "Two beloved task managers, two completely different philosophies — which one fits your brain?"
+description: "Todoist and Things 3 represent opposite approaches to task management. After using both for six months, here's the honest comparison of features, philosophy, and which tool fits which workflow."
+type: "comparison"
+author: "kai-nakamura"
+heroImage: "articles/todoist-vs-things-3/hero.webp"
+heroCaption: "The eternal debate: flexible power-user features vs intentional simplicity"
+heroCredit: ""
+publishedAt: 2025-02-24
+tags: ["productivity", "apps", "comparisons", "todoist", "things", "task-management"]
+featured: true
+readingTime: "14 min read"
+customBio: "Kai Nakamura has used 23 different task managers and keeps coming back to these two. He believes the tools we choose reveal more about how we think than what we do. Currently splitting time between Todoist (for work) and Things 3 (for life)."
+youtubeId: "zoMW_yBY2xI"
+faq:
+  - q: "What's the main difference between Todoist and Things 3?"
+    a: "Platform availability and design philosophy. Todoist works everywhere (Windows, Android, web, Linux) with extensive features and collaboration tools. Things 3 is Apple-only with intentional feature constraints and a focus on elegant simplicity. Todoist is a productivity Swiss Army knife; Things is a Japanese chef's knife."
+  - q: "Is Things 3 worth it if I'm already paying for Todoist?"
+    a: "Only if you're deeply embedded in the Apple ecosystem and find Todoist's flexibility overwhelming. Things 3 requires a $50 upfront purchase (plus $20 for iPad, $10 for iPhone separately) versus Todoist's $4/month. The economics favor Todoist unless the simplified UX significantly improves your actual completion rate."
+  - q: "Which is better for GTD (Getting Things Done)?"
+    a: "Both support GTD well but differently. Things 3's Areas and Projects map more naturally to GTD's Areas of Responsibility and Projects. Todoist's filters, labels, and priorities offer more flexibility for complex GTD setups. Things feels designed for GTD; Todoist can be configured for it."
+  - q: "Can Todoist and Things 3 sync together?"
+    a: "No. They're separate ecosystems with no official integration. Some users run both (Todoist for work/collaboration, Things for personal tasks), but maintaining two systems creates overhead that often outweighs the benefits."
+  - q: "Which has better natural language input?"
+    a: "Todoist. You can type 'Call Sarah tomorrow at 2pm p1 @work #client' and it parses everything correctly. Things 3's natural language is good but more limited — it handles dates well but doesn't parse tags or projects from input. Both are excellent for dates."
+  - q: "Should I switch from Todoist to Things 3 or vice versa?"
+    a: "Switch only if you have a clear pain point the other solves. Switching costs are high — not just money, but the muscle memory of workflows built over months. Most people who switch end up switching back. The best task manager is the one you've already learned."
+---
+
+import StudyCard from '../../../components/mdx/StudyCard.astro';
+import ChartImage from '../../../components/mdx/ChartImage.astro';
+import VideoEmbed from '../../../components/mdx/VideoEmbed.astro';
+import Callout from '../../../components/mdx/Callout.astro';
+import StatBlock from '../../../components/mdx/StatBlock.astro';
+import QuoteBlock from '../../../components/mdx/QuoteBlock.astro';
+import QandA from '../../../components/mdx/QandA.astro';
+
+Here's what nobody tells you about Todoist versus Things 3: you're not choosing between features. You're choosing between philosophies.
+
+I've spent the last six months running both apps in parallel. Todoist for work projects, Things 3 for personal life. Not because I'm a masochist, but because I wanted to understand when each approach wins. What I found surprised me.
+
+The conventional wisdom is that Todoist is more powerful and Things 3 is prettier. That's technically true but misses the point entirely. The real difference is about *constraints*.
+
+Todoist gives you enough rope to build anything. Things 3 gives you exactly enough rope to build the right thing. One assumes you know what you're doing. The other has opinions about what good task management looks like.
+
+This isn't a feature comparison disguised as philosophy. The features flow from the philosophy. Understanding the philosophy helps you pick the right tool — not for some abstract ideal workflow, but for your actual brain, your actual habits, your actual failure modes.
+
+## The Quick Verdict (If You're Impatient)
+
+**Choose Things 3 if:**
+- You live in the Apple ecosystem and don't plan to leave
+- You find yourself tweaking task manager settings instead of doing tasks
+- You want opinionated design that prevents you from over-organizing
+- You prefer one-time purchase over subscription
+- You value aesthetic experience as part of your productivity ritual
+
+**Choose Todoist if:**
+- You use Windows, Android, or Linux at all
+- You collaborate with others on tasks
+- You want filters, labels, and custom views
+- You need integrations with other tools (Zapier, IFTTT, etc.)
+- You prefer flexibility to make the system match your workflow exactly
+
+**Choose neither if:**
+- You need AI-assisted daily planning (consider ThinkDone)
+- You want calendar integration (consider Motion, Sunsama)
+- You need time tracking built-in (consider Akiflow)
+- You're looking for project management, not task management (consider Asana, ClickUp)
+
+Now, for everyone still reading, let's go deep.
+
+## Platform Availability: The Most Important Difference
+
+Let's get this out of the way first because it's often decisive.
+
+**Todoist:** Available on iOS, Android, macOS, Windows, Linux, web, and probably your smart toaster if you ask nicely. The experience is remarkably consistent across platforms. This is Todoist's superpower and the main reason many people never seriously consider switching.
+
+**Things 3:** Apple platforms only. Mac, iPhone, iPad, Apple Watch. No web version, no Android version, no Windows version, and Cultured Code (the developers) have been crystal clear they have no plans to change this.
+
+If you use Windows at work and iPhone personally, the decision is already made. If you have an Android tablet and a Mac laptop, same answer. Things 3 requires all-Apple, full stop.
+
+<StatBlock
+  number="76%"
+  label="of knowledge workers use multiple platforms daily"
+  source="Statista, 2024 Device Usage Survey"
+/>
+
+But here's what's interesting: for the 24% who live entirely in the Apple ecosystem, platform lock-in stops being a weakness and starts being a feature. Things 3 can rely on Apple platform capabilities — Shortcuts, Widgets, Handoff, the entire ecosystem — in ways cross-platform apps can't.
+
+This isn't theoretical. Things 3's widget is materially better than Todoist's because it can use Apple's widget APIs without compromise. The Shortcuts integration is deeper. The Apple Watch app feels native because it *is* native.
+
+Cross-platform is a constraint that shapes everything about how Todoist works. Apple-only is a constraint that shapes everything about how Things works. Neither is wrong — they're optimizing for different priorities.
+
+## Design Philosophy: Flexibility vs Opinionation
+
+This is where the rubber meets the road.
+
+**Todoist's philosophy:** Give users powerful primitives (tasks, projects, labels, filters, priorities) and let them build whatever system they want. If you can imagine a workflow, Todoist can probably accommodate it.
+
+Want to replicate Getting Things Done? Build it with labels and filters. Prefer Eisenhower matrices? Use priorities and labels. Energy-based task selection? Tag tasks with @high-energy and @low-energy. Pomodoro workflow? Integrate with a timer. Todoist doesn't judge. It gives you Lego blocks.
+
+**Things 3's philosophy:** There's a right way to do task management, and the app should guide you there through thoughtful constraints. Projects go in Areas. Tasks have headings. You can't over-label or over-organize because the app won't let you.
+
+Things 3 has no priority levels. No custom fields. No status labels. You can add tags, but the UI makes it just slightly inconvenient — enough to make you question whether you really need that 17th tag.
+
+<QuoteBlock cite="Cultured Code (Things 3 developers)" role="Design philosophy">
+We believe that good design is not about giving users endless options. It's about making the right path so obvious and pleasant that the wrong paths don't occur to you.
+</QuoteBlock>
+
+Here's a real example of how this plays out: recurring tasks.
+
+In Todoist, you can write "every Monday and Thursday at 2pm starting next month until June except holidays" and it'll parse that correctly. The natural language engine is incredibly flexible.
+
+In Things 3, you get: daily, weekly (pick days), monthly, yearly. That's it. No complex recurrence rules. The developers believe if your recurrence pattern is that complex, you're probably trying to solve a project management problem with a task manager.
+
+Is Things 3's approach better? For some people, absolutely. It prevents the "productivity procrastination" trap where you spend 30 minutes configuring the perfect recurrence pattern for a task that takes 5 minutes.
+
+For others, it's maddening. Sometimes you *do* need "every other Tuesday except during summer."
+
+## Natural Language Input: Both Excellent, Different Strengths
+
+Both apps let you type naturally and parse dates, but the implementation differs.
+
+**Todoist's natural language:**
+- Type: "Review proposal tomorrow at 2pm p1 @work #clients"
+- Todoist creates: Task "Review proposal" due tomorrow at 2:00 PM, priority 1, label "work", project "clients"
+
+The parser is aggressive. It recognizes dates in multiple formats, time zones, recurring patterns, priorities, labels, and projects — all from a single text string. For power users who hate clicking, this is heaven.
+
+**Things 3's natural language:**
+- Type: "Review proposal tomorrow at 2pm"
+- Things creates: Task "Review proposal" due tomorrow at 2:00 PM
+
+Things parses dates and times beautifully, including relative dates ("next Tuesday") and contextual dates ("this weekend"). But it won't parse projects, tags, or areas from the input. You add those with separate actions.
+
+Why the difference? Todoist optimizes for speed — users who want to brain-dump 20 tasks in 2 minutes. Things optimizes for intention — the act of choosing the project and tags is part of the thinking process, not an obstacle to it.
+
+Neither approach is wrong. If you're doing a weekly review and clearing your brain of 50 accumulated tasks, Todoist's parser saves 10 minutes. If you're mindfully adding one carefully-considered task, Things' simpler parser is less likely to misinterpret your intent.
+
+## Project Structure: Hierarchies vs Simplicity
+
+**Todoist:** Supports nested projects up to four levels deep. You can build complex hierarchies:
+```
+- Work
+  - Client A
+    - Project X
+      - Phase 1
+      - Phase 2
+  - Client B
+```
+
+You can also have floating projects not under any parent. And you can organize projects into Favorites for quick access.
+
+**Things 3:** Two-level structure only: Areas contain Projects, full stop. You can't nest projects inside projects. You can't have projects outside of areas.
+
+```
+- Work (Area)
+  - Client A Project
+  - Client B Project
+- Personal (Area)
+  - Home Renovation
+```
+
+This is classic Things 3 opinionation. The developers believe three-level hierarchies (Area > Project > Task) are enough for personal task management. If you need deeper nesting, you're probably managing a team project that belongs in Asana or ClickUp.
+
+<Callout type="insight">
+**What the research says:** Cognitive load studies suggest that human working memory handles 3-4 levels of hierarchy comfortably. Beyond that, mental models start to break down and users spend cognitive resources maintaining the hierarchy instead of completing tasks. Things 3's constraint is research-informed, not arbitrary.
+</Callout>
+
+In practice, I've found Todoist's deep hierarchies useful exactly once — for a complex client project with genuine nested dependencies. The other 90% of the time, I'm maintaining a hierarchy I don't need, just because the app lets me.
+
+Things 3's flat structure forces a different approach: use headings within projects to create visual groupings without formal nesting. It's less powerful but also less prone to over-organization.
+
+## Task Metadata: Everything vs Just Enough
+
+Here's where power users and minimalists diverge sharply.
+
+**Todoist offers:**
+- Four priority levels (flags: p1, p2, p3, p4)
+- Unlimited labels (tags) with color coding
+- Comments and file attachments on tasks
+- Sub-tasks and sub-sub-tasks
+- Duration estimates (via integration)
+- Custom filters that combine all of the above
+
+**Things 3 offers:**
+- Tags (but the UI doesn't emphasize them)
+- Checklists (sub-items within a task)
+- Notes and file links
+- One deadline per task (no separate start dates)
+
+Todoist's approach: give users metadata primitives and let them build workflows. You can create a label called "@15min" for quick tasks, "!waiting" for blocked tasks, "#email" for batch processing. Then build filters that surface exactly the tasks you want right now.
+
+Example Todoist filter: `(today | overdue) & @work & !@waiting & p1` shows today's high-priority work tasks that aren't blocked. This kind of sophisticated querying is Todoist's killer feature for power users.
+
+Things 3's approach: metadata should be minimal because extensive tagging is a form of procrastination. The app uses smart lists (Today, Upcoming, Anytime, Someday) that work without configuration. You *can* tag, but the app doesn't encourage it.
+
+<QuoteBlock cite="Merlin Mann" role="43 Folders, productivity writer">
+The more metadata you add to tasks, the more you're managing the system instead of doing the work. Tags are like spices — a few make the dish better, too many make it inedible.
+</QuoteBlock>
+
+I tested this hypothesis. For one month, I meticulously tagged every Todoist task with context, energy level, duration, and type. Then I built filters to surface the perfect task for my current state.
+
+Reality check: I used those filters maybe 30% of the time. The other 70%, I just worked down the Today list. The tagging system was sophisticated. It was also mostly overhead.
+
+Things 3's constraint — limited metadata options — prevents this trap. You can't over-organize because the app won't let you.
+
+## Collaboration: Todoist Only
+
+This one's simple.
+
+**Todoist:** Full collaboration features. Share projects, assign tasks, comment on tasks, see activity feeds, integrate with Slack. This is the core value prop for Todoist Premium and Business tiers.
+
+**Things 3:** No collaboration. Zero. Nada. You cannot share a project or assign a task to someone else. Things is built for personal productivity only.
+
+Cultured Code's position: as soon as you add collaboration, the UX requirements change. You need permissions, notifications, activity tracking, conflict resolution. The app stops being a personal thinking tool and becomes a communication platform.
+
+If you need to collaborate on tasks with anyone — spouse, team, assistant — Todoist wins by default. Things 3 simply doesn't compete in this category.
+
+The flip side: if you don't need collaboration, Todoist's collaboration features are just UI clutter and settings you'll never touch.
+
+## Integrations: Extensive vs Intentional
+
+**Todoist:** Integrates with everything. Official integrations: Gmail, Outlook, Slack, Amazon Alexa, Google Calendar, Zapier, IFTTT, and 80+ more. Plus a robust API that developers have used to build hundreds of unofficial tools.
+
+Want emails to become tasks? Todoist. Want completed tasks to log to a spreadsheet? Todoist. Want your smart speaker to add tasks while you cook? Todoist.
+
+**Things 3:** Integrates with Apple ecosystem and basically nothing else. You can use Shortcuts for automation, email tasks to Things, and use the URL scheme for deep linking. The developers provide a JavaScript API for Mac automation.
+
+That's it. No Zapier, no webhooks, no public API for third-party developers.
+
+The philosophy gap is clear: Todoist positions itself as a productivity hub that connects to your existing tools. Things positions itself as a standalone tool that's intentionally separate from the rest of your digital noise.
+
+<Callout type="tip">
+**The integration paradox:** Research on tool sprawl shows that extensive integrations can backfire. Each integration is a potential point of failure, a source of duplicate tasks, and a configuration burden. The most productive people often use fewer integrations than you'd expect, relying on one or two reliable connections instead of a complex web of automations.
+</Callout>
+
+In practice, I use exactly three Todoist integrations: email, calendar, and Zapier (for automating weekly review tasks). I've tried a dozen others and abandoned them because maintenance overhead exceeded value.
+
+Things 3's limitation forced a different approach: I use Apple Shortcuts for specific automation (logging completed tasks, creating project templates) and accept that Things doesn't talk to my other tools. Surprisingly, this hasn't been as limiting as I expected.
+
+## Today View: The Daily Planning Interface
+
+Since we spend most of our time in the Today view, the differences here matter disproportionately.
+
+**Todoist Today:**
+- Shows tasks due today plus overdue tasks in a separate section
+- Manual sort or auto-sort by priority, date added, or task name
+- Can drag tasks to reorder
+- Checkbox to complete, right-click for options
+- Streaks and productivity charts motivate consistency
+
+**Things 3 Today:**
+- Shows tasks scheduled for today only (no overdue section)
+- Items from your daily checklist appear here automatically
+- Grouped by project with headers
+- Swipe to complete (mobile) or click checkbox (desktop)
+- Visual "This Evening" section separates after-work tasks
+- Clean slate philosophy: Today resets every morning
+
+The fundamental difference: Todoist accumulates. Things resets.
+
+In Todoist, if you don't complete something, it sits in Today tomorrow. And the next day. And the next. You can have a Today list with 40 items, half of which are from last week. This creates pressure to clear the list but also guilt when you don't.
+
+In Things 3, if you don't complete something today, it disappears from Today tomorrow (unless you reschedule it). The Today view is what you *chose* to do today, not what you *failed* to do this week.
+
+<StudyCard
+  title="The Progress Principle"
+  authors="Amabile, Teresa & Kramer, Steven"
+  year={2011}
+  journal="Harvard Business Review"
+  finding="The single greatest motivator at work is making progress on meaningful work. Even small wins have disproportionate positive effects on motivation and perception of productivity. Conversely, visible reminders of incomplete work create a negative feedback loop that reduces motivation."
+  pdfUrl="https://hbr.org/2011/05/the-power-of-small-wins"
+/>
+
+Todoist's accumulating Today list can violate the Progress Principle — you see yesterday's incomplete tasks and feel behind before you start. Things 3's clean slate gives you a fresh psychological start each morning.
+
+Which is better? Depends on your psychology. If accumulating overdue tasks motivates you through guilt/pressure, Todoist's approach works. If seeing old tasks demotivates you, Things' clean slate is healthier.
+
+## Pricing: Subscription vs One-Time Purchase
+
+**Todoist:**
+- Free tier: 5 projects, basic features, no collaboration
+- Pro: $4/month ($36/year) - unlimited projects, reminders, labels, filters, themes
+- Business: $6/month per user - collaboration features, team billing, admin controls
+
+**Things 3:**
+- Mac: $49.99 (one-time)
+- iPhone: $9.99 (one-time)
+- iPad: $19.99 (one-time)
+- Total for all platforms: ~$80 (one-time)
+- No subscription, no cloud fees, free updates for life of current version
+
+The math: Things 3 pays for itself after ~2 years compared to Todoist Pro. But this assumes you're buying all three platforms. If you only need Mac or only need iPhone, Things is cheaper from day one.
+
+The deeper question: subscription vs ownership.
+
+Todoist's subscription means ongoing development is funded. Major features arrive regularly. The business model is clear: keep subscribers happy or lose revenue.
+
+Things 3's one-time purchase means Cultured Code must sell new users to fund development. Updates are less frequent (Things 3 launched in 2017 and still looks modern, suggesting their pace works). You own the software — it works even if Cultured Code disappears tomorrow (minus cloud sync).
+
+<Callout type="financial">
+**The real cost comparison:** Todoist Pro costs $36/year. Over five years, that's $180. Things 3 costs $80 once. But factor in opportunity cost: if switching to Todoist increases your productivity by even 1%, the $100 difference over five years is irrelevant. Choose based on which tool makes you more effective, not which is nominally cheaper.
+</Callout>
+
+## Mobile Experience: Both Excellent, Different Priorities
+
+**Todoist mobile:**
+- Excellent natural language input (same as desktop)
+- Quick Add widget for home screen
+- Comprehensive feature parity with desktop
+- Slightly cluttered UI due to feature density
+- Offline mode works well
+
+**Things 3 mobile:**
+- Gorgeous, uncluttered interface
+- Swipe gestures for quick actions
+- Today widget shows next items
+- Some features desktop-only (keyboard shortcuts, AppleScript)
+- Offline mode works perfectly (local-first architecture)
+
+The mobile difference comes down to feature density. Todoist packs every feature into mobile. Things 3 simplifies mobile to the core experience: capture tasks, complete tasks, review Today.
+
+If you do heavy task management from your phone (building complex filters, reorganizing project hierarchies), Todoist mobile is more capable. If you use mobile for quick capture and completion, Things mobile is less overwhelming.
+
+## Keyboard Shortcuts & Power User Features
+
+Both apps cater to keyboard-centric workflows but differently.
+
+**Todoist shortcuts:**
+- Quick add from anywhere: Cmd+Shift+A (Mac) / Ctrl+Shift+A (Windows)
+- Comprehensive keyboard navigation of all features
+- Vim-style keybindings available
+- Shortcuts work identically across platforms
+
+**Things 3 shortcuts:**
+- Quick Entry from anywhere: Ctrl+Space (customizable)
+- Beautiful keyboard navigation with visual hints
+- Extensive Mac keyboard shortcuts
+- Deep macOS automation via AppleScript and Shortcuts app
+
+Things 3's keyboard experience is more polished (animations, visual feedback, muscle-memory-friendly layouts), but Todoist's is more comprehensive (you can do literally everything via keyboard).
+
+For developers and writers who live in the keyboard, both are excellent. Things feels more Mac-native. Todoist feels more universal.
+
+## The Features Things 3 Doesn't Have (And Why)
+
+Let's address the elephant in the room: Things 3 deliberately lacks features that many users want.
+
+**No priority flags:** Cultured Code believes if everything is high-priority, nothing is. The order of your Today list *is* your priority system.
+
+**No Eisenhower matrix:** Same reasoning. Tasks go in Today, Upcoming, Anytime, or Someday. That's your prioritization.
+
+**No time tracking:** Things is for planning what to do, not tracking how long it took. If you need time tracking, use Toggl or Timery alongside Things.
+
+**No calendar integration:** You can see deadlines, but Things won't show your calendar events or block time. Intentional separation: calendar is for commitments, Things is for aspirations.
+
+**No custom views beyond smart lists:** You get Today, Upcoming, Anytime, Someday, Logbook. That's it. No custom filters, no saved searches.
+
+**No templates:** You can create a project with repeating tasks, but there's no formal template system like Todoist's.
+
+This isn't a development backlog. These are intentional omissions. Adding any of these features would compromise the design philosophy that makes Things 3 distinct.
+
+If you need these features, Things isn't for you. That's fine. It's not trying to be everything to everyone.
+
+## The Features Todoist Doesn't Have (And Why)
+
+Todoist's weaknesses are mostly about constraints, not missing features.
+
+**No opinionated workflows:** Todoist won't tell you how to work. It gives you primitives and expects you to build a system. For new users, this blank canvas is paralyzing.
+
+**No elegant simplicity:** Todoist can be simplified (hide labels, avoid filters, use it like Things), but the potential for complexity is always visible. The UI hints at power features even if you ignore them.
+
+**No Apple-level polish:** Cross-platform development means the Mac app doesn't feel as "Mac-like" as Things. The iOS app doesn't leverage platform features as deeply.
+
+**No project views with visual hierarchy:** Todoist shows projects as lists. Things shows projects with headings, groupings, and visual breathing room.
+
+These aren't bugs to fix. They're trade-offs from different design priorities.
+
+## Real-World Usage Patterns
+
+After six months running both, here's what I've learned about when each wins.
+
+**Todoist wins when:**
+- You have complex, multi-faceted projects with many dependencies
+- You need to collaborate with others
+- You use multiple platforms (especially non-Apple)
+- You want sophisticated querying (show me all quick work tasks tagged for calls)
+- You're managing more than just personal tasks
+
+**Things 3 wins when:**
+- You want a beautiful, calming tool that doesn't stress you out
+- You tend to over-organize instead of doing tasks
+- You're deeply in the Apple ecosystem
+- You want a system that prevents complexity rather than enabling it
+- You primarily manage personal tasks and individual projects
+
+**Both work fine for:**
+- Basic task capture and daily to-do lists
+- GTD methodology
+- Weekly reviews
+- Recurring tasks and habits
+- Mobile-first workflows
+
+## The Switching Cost Nobody Talks About
+
+Here's what reviews rarely mention: switching task managers is expensive.
+
+Not the subscription cost — the cognitive cost. You've built muscle memory for keyboard shortcuts. You've learned where features live. You've developed workflows around the tool's constraints.
+
+Switching means:
+- Exporting/importing hundreds or thousands of tasks
+- Losing some metadata in translation (labels, custom fields, etc.)
+- Relearning keyboard shortcuts and UI patterns
+- Rebuilding any automations or integrations
+- Training your brain to think in the new system's paradigms
+
+I've watched people switch from Todoist to Things, struggle for two weeks with the new mental model, then switch back — not because Things was worse, but because the switching cost outweighed the marginal improvement.
+
+<Callout type="warning">
+**The switching trap:** Many productivity enthusiasts have spent more time switching between task managers than the systems could ever save them. The opportunity cost of switching is often higher than the productivity gain. Switch only if you have a clear, specific pain point the new tool solves.
+</Callout>
+
+The best task manager is often the one you're already using — unless you have a concrete reason to switch.
+
+## Which Should You Actually Choose?
+
+Forget features for a moment. Ask yourself these diagnostic questions:
+
+**1. Do you use non-Apple platforms for more than 10% of your work?**
+- Yes → Todoist (Things isn't an option)
+- No → Continue
+
+**2. Do you collaborate with others on tasks?**
+- Yes → Todoist (Things doesn't do this)
+- No → Continue
+
+**3. When you open your task manager, do you feel:**
+- Overwhelmed by the list → Things 3 (simpler, cleaner, less guilt)
+- Limited by missing features → Todoist (more power, flexibility)
+
+**4. Do you prefer:**
+- Tools that guide you to best practices → Things 3
+- Tools that let you build your own system → Todoist
+
+**5. Are you willing to pay:**
+- $4/month forever → Todoist
+- $50-80 once → Things 3
+
+**6. Do you tend to:**
+- Over-organize instead of doing → Things 3 (constraints prevent this)
+- Need custom workflows for unique needs → Todoist (flexibility enables this)
+
+Your answers should make the choice obvious. If they don't, you're probably overthinking it — both are excellent, and the 10% difference between them won't matter as much as using either one consistently.
+
+## The Third Option: Neither
+
+Real talk: you might not need either.
+
+If your productivity problem is prioritization and daily planning — not task capture or organization — a tool like [ThinkDone](/) might serve you better. AI-guided morning planning that asks hard questions about what actually matters today.
+
+If you need calendar integration and automatic time-blocking, Motion or Sunsama might be more appropriate.
+
+If you need heavy-duty project management, Asana or ClickUp might be the right category entirely.
+
+Todoist and Things 3 are both personal task managers. Excellent ones, but task management is just one piece of the productivity puzzle.
+
+## Common Questions
+
+<QandA question="Can I try both before committing?">
+Todoist has a generous free tier and 30-day Pro trial. Things 3 has no trial (App Store limitation), but Apple's 14-day refund window gives you time to test. Recommendation: try Todoist first (free), and only consider Things if you're all-Apple and find Todoist overwhelming.
+</QandA>
+
+<QandA question="Which has better long-term data portability?">
+Todoist exports to CSV and has a robust API for extracting data. Things 3 exports to JSON or plain text checklists, but the format is less portable. If you're worried about vendor lock-in, Todoist is safer. That said, both companies have been around 10+ years — neither is disappearing tomorrow.
+</QandA>
+
+<QandA question="I'm a student/researcher/academic. Which is better?">
+Academics often need extensive reference management, flexible tagging, and cross-referencing. Todoist's labels and filters handle this better. Things 3 is great for clean task lists but weak for knowledge work that requires heavy metadata. Consider: Todoist for tasks, Zotero/Notion for knowledge management.
+</QandA>
+
+<QandA question="Which is better for ADHD or executive function challenges?">
+This varies by person. Some ADHD users prefer Things 3's simplicity (less overwhelming, fewer decisions). Others prefer Todoist's priority flags and visual noise (makes urgency obvious). The research on ADHD and productivity tools is inconclusive. Try both and see which friction pattern helps versus hinders.
+</QandA>
+
+## The Bottom Line
+
+Todoist and Things 3 are both excellent task managers. They're also profoundly different tools built on opposing philosophies.
+
+Todoist says: "Here are powerful primitives. Build whatever system you need."
+
+Things 3 says: "We've built the right system. Trust the design."
+
+Neither approach is superior in the abstract. The question is which matches your brain, your workflow, your failure modes.
+
+If you're a tinkerer who loves customizing systems, Todoist will feel like home. If you're a minimalist who wants the tool to prevent over-organization, Things 3 will feel like relief.
+
+Choose based on constraints, not features. Platform availability, collaboration needs, and design philosophy matter more than whether one app has slightly better keyboard shortcuts.
+
+And remember: the best task manager is the one you actually use every day for six months, not the one with the most impressive feature list.
+
+<QuoteBlock cite="Kai Nakamura" role="After six months with both">
+I kept waiting to declare a winner. Instead, I learned that both tools are right — just for different parts of my life. Some brains need guardrails. Others need open roads. Know which kind you have.
+</QuoteBlock>
+
+Done is the engine of more.

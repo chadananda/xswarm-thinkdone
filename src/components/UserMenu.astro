@@ -1,0 +1,313 @@
+---
+interface Props {
+  /** Use light colors (for transparent SiteNav over dark hero) */
+  lightText?: boolean;
+  /** Always show signed-in menu (for app pages) */
+  appMode?: boolean;
+}
+
+const { lightText = false, appMode = false } = Astro.props;
+---
+
+<div class:list={['user-menu-wrap', lightText && 'user-menu-light']} data-app-mode={appMode ? 'true' : undefined}>
+  <!-- Signed-out: round icon triggers One Tap sign-in -->
+  {!appMode && (
+    <button class="user-menu-btn user-menu-btn-signedout" data-signin title="Sign In" aria-label="Sign In">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+        <circle cx="12" cy="7" r="4"/>
+      </svg>
+    </button>
+  )}
+  <!-- Signed-in: round icon opening dropdown -->
+  <button
+    class:list={['user-menu-btn user-menu-btn-signedin', !appMode && 'user-menu-btn-hidden']}
+    data-user-btn
+    title="User menu"
+    aria-label="User menu"
+    aria-expanded="false"
+  >
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+      <circle cx="12" cy="7" r="4"/>
+    </svg>
+  </button>
+  <div class="user-menu-dropdown" data-user-dropdown role="menu" aria-label="User menu">
+    <button class="um-item" data-um-signin role="menuitem" style="display:none">
+      <span class="um-icon" aria-hidden="true">
+        <svg width="14" height="14" viewBox="0 0 24 24" style="vertical-align:middle"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+      </span> Sign in with Google
+    </button>
+    <a href="/tasks" class="um-item" role="menuitem">
+      <span class="um-icon" aria-hidden="true">&#9745;</span> Tasks
+    </a>
+    <button class="um-item" data-um-meeting role="menuitem">
+      <span class="um-icon" aria-hidden="true">&#128172;</span> Planning Meeting
+    </button>
+    <a href="/usage" class="um-item" role="menuitem">
+      <span class="um-icon" aria-hidden="true">&#128202;</span> Token Usage
+    </a>
+    <a href="/settings" class="um-item" role="menuitem">
+      <span class="um-icon" aria-hidden="true">&#9881;</span> Settings
+    </a>
+    <button class="um-item" data-um-theme role="menuitem">
+      <span class="um-icon" data-theme-icon aria-hidden="true">&#9788;</span>
+      <span data-theme-label>Dark Mode</span>
+    </button>
+    <div class="um-divider" role="separator"></div>
+    <button class="um-item um-danger" data-um-reset role="menuitem">
+      <span class="um-icon" aria-hidden="true">&#9888;</span> Reset Database
+    </button>
+    <button class="um-item" data-um-logout role="menuitem">
+      <span class="um-icon" aria-hidden="true">&#8618;</span> Log Out
+    </button>
+  </div>
+</div>
+
+<script is:inline>
+(function() {
+  document.querySelectorAll('.user-menu-wrap').forEach(function(wrap) {
+    var btn = wrap.querySelector('[data-user-btn]');
+    var dropdown = wrap.querySelector('[data-user-dropdown]');
+    var signinLink = wrap.querySelector('[data-signin]');
+    var isApp = wrap.dataset.appMode === 'true';
+
+    // In marketing mode, check for cookie to swap icon behavior
+    if (!isApp) {
+      var hasUser = document.cookie.indexOf('td_user=') !== -1;
+      if (hasUser) {
+        if (signinLink) signinLink.style.display = 'none';
+        btn.classList.remove('user-menu-btn-hidden');
+      }
+      // Signed-out icon triggers One Tap on click or hover
+      if (signinLink) {
+        function triggerSignin(e) {
+          e.preventDefault();
+          if (window.__googleOneTapPrompt) {
+            window.__googleOneTapPrompt();
+          } else {
+            window.location.href = '/api/auth/google';
+          }
+        }
+        signinLink.addEventListener('click', triggerSignin);
+        signinLink.addEventListener('mouseenter', function() {
+          if (window.__googleOneTapPrompt) window.__googleOneTapPrompt();
+        });
+      }
+    }
+
+    // Show profile picture from localStorage if available
+    var profileJson = localStorage.getItem('td_profile');
+    if (profileJson) {
+      try {
+        var profile = JSON.parse(profileJson);
+        if (profile.picture) {
+          var img = document.createElement('img');
+          img.src = profile.picture;
+          img.alt = profile.name || 'Profile';
+          img.width = 30;
+          img.height = 30;
+          img.style.cssText = 'border-radius:50%;object-fit:cover;';
+          img.referrerPolicy = 'no-referrer';
+          btn.innerHTML = '';
+          btn.appendChild(img);
+        }
+      } catch(e) {}
+    }
+
+    // In app mode with no profile, show "Sign in with Google" in dropdown
+    var signinItem = wrap.querySelector('[data-um-signin]');
+    if (signinItem) {
+      if (!profileJson) {
+        signinItem.style.display = '';
+        signinItem.addEventListener('click', function() {
+          dropdown.classList.remove('open');
+          if (window.__googleOneTapPrompt) {
+            window.__googleOneTapPrompt();
+          } else {
+            window.location.href = '/api/auth/google';
+          }
+        });
+      } else {
+        signinItem.style.display = 'none';
+      }
+    }
+
+    // Toggle dropdown
+    btn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      var open = dropdown.classList.toggle('open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+
+    document.addEventListener('click', function() {
+      dropdown.classList.remove('open');
+      btn.setAttribute('aria-expanded', 'false');
+    });
+
+    dropdown.addEventListener('click', function(e) { e.stopPropagation(); });
+
+    // Meeting button — navigate in-place (single-tab OPFS constraint)
+    var meetBtn = wrap.querySelector('[data-um-meeting]');
+    if (meetBtn) {
+      meetBtn.addEventListener('click', function() {
+        dropdown.classList.remove('open');
+        window.location.href = '/meeting';
+      });
+    }
+
+    // Theme toggle
+    var themeBtn = wrap.querySelector('[data-um-theme]');
+    var themeIcon = wrap.querySelector('[data-theme-icon]');
+    var themeLabel = wrap.querySelector('[data-theme-label]');
+
+    function updateThemeUI() {
+      var current = document.documentElement.style.colorScheme || 'light';
+      if (current === 'dark') {
+        themeIcon.innerHTML = '&#9790;';
+        themeLabel.textContent = 'Light Mode';
+      } else {
+        themeIcon.innerHTML = '&#9788;';
+        themeLabel.textContent = 'Dark Mode';
+      }
+    }
+
+    updateThemeUI();
+
+    if (themeBtn) {
+      themeBtn.addEventListener('click', function() {
+        var current = document.documentElement.style.colorScheme || 'light';
+        var next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.style.colorScheme = next;
+        localStorage.setItem('td-theme', next);
+        updateThemeUI();
+      });
+    }
+
+    // Reset DB
+    var resetBtn = wrap.querySelector('[data-um-reset]');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', function() {
+        if (confirm('Reset all data? This clears tasks, memories, routines, and settings.')) {
+          dropdown.classList.remove('open');
+          window.location.href = '/meeting?reset';
+        }
+      });
+    }
+
+    // Logout
+    var logoutBtn = wrap.querySelector('[data-um-logout]');
+    if (logoutBtn) {
+      logoutBtn.addEventListener('click', function() {
+        document.cookie = 'td_user=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/';
+        localStorage.removeItem('td_profile');
+        dropdown.classList.remove('open');
+        window.location.href = '/';
+      });
+    }
+  });
+})();
+</script>
+
+<style>
+  .user-menu-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Round profile icon button (shared base) */
+  .user-menu-btn {
+    appearance: none;
+    border: 1.5px solid var(--color-ink-faint);
+    background: transparent;
+    color: var(--color-ink-muted);
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+    padding: 0;
+    text-decoration: none;
+  }
+  .user-menu-btn:hover {
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+    background: rgba(139,69,19,0.05);
+  }
+
+  /* Signed-out icon: grayed, dimmer */
+  .user-menu-btn-signedout {
+    opacity: 0.6;
+  }
+  .user-menu-btn-signedout:hover {
+    opacity: 1;
+  }
+
+  /* Light variant (transparent SiteNav over dark hero) */
+  .user-menu-light .user-menu-btn {
+    color: rgba(255,255,255,0.6);
+    border-color: rgba(255,255,255,0.25);
+  }
+  .user-menu-light .user-menu-btn:hover {
+    color: #fff;
+    border-color: rgba(255,255,255,0.6);
+    background: rgba(255,255,255,0.08);
+  }
+
+  .user-menu-btn-hidden {
+    display: none;
+  }
+
+  /* Dropdown */
+  .user-menu-dropdown {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 100%;
+    margin-top: 6px;
+    background: var(--color-paper-bright);
+    border: 1px solid var(--color-ink-faint);
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(139,69,19,0.12), 0 2px 6px rgba(0,0,0,0.08);
+    min-width: 160px;
+    padding: 4px 0;
+    z-index: 300;
+    animation: umFade 0.12s ease-out;
+  }
+  .user-menu-dropdown.open { display: block; }
+
+  @keyframes umFade {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .um-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 14px;
+    font-family: var(--font-ui);
+    font-size: 0.8rem;
+    color: var(--color-ink);
+    text-decoration: none;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.1s;
+  }
+  .um-item:hover { background: rgba(139,69,19,0.05); }
+  .um-icon { font-size: 0.9rem; width: 18px; text-align: center; }
+  .um-danger { color: #b91c1c; }
+  .um-danger:hover { background: rgba(185,28,28,0.06); }
+  .um-divider {
+    height: 1px;
+    background: var(--color-ink-faint);
+    margin: 4px 10px;
+  }
+</style>

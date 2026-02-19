@@ -1,0 +1,17 @@
+export const QUOTES = [
+  "Done is the engine of more.",
+  "Finished is better than perfect.",
+  "Small steps still move you forward.",
+  "What gets scheduled gets done.",
+  "Progress, not perfection.",
+  "Today\u2019s priorities shape tomorrow\u2019s possibilities.",
+  "The best plan is the one you actually follow.",
+  "Clarity precedes action.",
+  "Less deciding, more doing.",
+  "Your future self will thank you.",
+  "Focus is saying no to good ideas.",
+  "Action cures anxiety.",
+  "Ship it. Then improve it.",
+  "One thing at a time. Most important thing first.",
+  "Think strategically. Execute relentlessly.",
+];

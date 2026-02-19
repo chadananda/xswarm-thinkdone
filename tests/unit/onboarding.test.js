@@ -17,9 +17,9 @@ beforeEach(async () => {
 //
 // --- generateOnboardingAgenda ---
 describe('generateOnboardingAgenda', () => {
-  it('returns 6 agenda items', () => {
+  it('returns 7 agenda items', () => {
     const agenda = generateOnboardingAgenda();
-    assert.equal(agenda.length, 6);
+    assert.equal(agenda.length, 7);
   });
   //
   it('has correct types and priorities in order', () => {
@@ -28,14 +28,16 @@ describe('generateOnboardingAgenda', () => {
     assert.equal(agenda[0].priority, 'critical');
     assert.equal(agenda[1].type, 'DECIDE');
     assert.equal(agenda[1].priority, 'critical');
-    assert.equal(agenda[2].type, 'DECIDE');
+    assert.equal(agenda[2].type, 'FOLLOW-UP');
     assert.equal(agenda[2].priority, 'high');
-    assert.equal(agenda[3].type, 'FOLLOW-UP');
-    assert.equal(agenda[3].priority, 'normal');
-    assert.equal(agenda[4].type, 'PLAN');
+    assert.equal(agenda[3].type, 'DECIDE');
+    assert.equal(agenda[3].priority, 'high');
+    assert.equal(agenda[4].type, 'REFLECT');
     assert.equal(agenda[4].priority, 'normal');
-    assert.equal(agenda[5].type, 'REFLECT');
-    assert.equal(agenda[5].priority, 'low');
+    assert.equal(agenda[5].type, 'PLAN');
+    assert.equal(agenda[5].priority, 'normal');
+    assert.equal(agenda[6].type, 'FOLLOW-UP');
+    assert.equal(agenda[6].priority, 'low');
   });
   //
   it('includes AI naming step', () => {
@@ -186,6 +188,7 @@ describe('persistOnboardingSummary', () => {
       type: 'onboarding',
       startedAt: '2026-02-10T09:00:00.000Z',
       endedAt: '2026-02-10T09:20:00.000Z',
+      messages: [],
       agenda: [],
     };
     const id = await persistOnboardingSummary(db, session);
@@ -249,7 +252,7 @@ describe('onboarding session state machine', () => {
     const session = createSession('onboarding');
     await initializeSession(session, db, () => generateOnboardingAgenda());
     assert.equal(session.state, 'OPENING');
-    assert.equal(session.agenda.length, 6);
+    assert.equal(session.agenda.length, 7);
   });
 });
 //

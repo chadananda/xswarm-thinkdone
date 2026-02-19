@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="600" viewBox="0 0 1400 600">
+  <rect fill="#f4efe6" width="1400" height="600"/>
+  <!-- Phone mockup -->
+  <rect fill="#3a3226" x="500" y="100" width="400" height="400" rx="30"/>
+  <rect fill="#fffdf8" x="520" y="130" width="360" height="340" rx="8"/>
+  <!-- Todoist-style checkboxes -->
+  <circle cx="545" cy="165" r="10" fill="none" stroke="#e44232" stroke-width="2"/>
+  <circle cx="545" cy="210" r="10" fill="none" stroke="#e44232" stroke-width="2"/>
+  <circle cx="545" cy="255" r="10" fill="none" stroke="#e44232" stroke-width="2"/>
+  <circle cx="545" cy="300" r="10" fill="#e44232"/>
+  <path d="M 540 300 L 543 303 L 550 296" fill="none" stroke="#fffdf8" stroke-width="2"/>
+  <circle cx="545" cy="345" r="10" fill="#e44232"/>
+  <path d="M 540 345 L 543 348 L 550 341" fill="none" stroke="#fffdf8" stroke-width="2"/>
+  <!-- Task lines -->
+  <line x1="565" y1="165" x2="820" y2="165" stroke="#3a3226" stroke-width="3"/>
+  <line x1="565" y1="210" x2="750" y2="210" stroke="#3a3226" stroke-width="3"/>
+  <line x1="565" y1="255" x2="800" y2="255" stroke="#3a3226" stroke-width="3"/>
+  <line x1="565" y1="300" x2="730" y2="300" stroke="#7a6a5a" stroke-width="2" opacity="0.5"/>
+  <line x1="565" y1="345" x2="790" y2="345" stroke="#7a6a5a" stroke-width="2" opacity="0.5"/>
+  <!-- Priority flags -->
+  <path d="M 840 158 L 840 172 L 850 165 Z" fill="#e44232"/>
+  <path d="M 770 203 L 770 217 L 780 210 Z" fill="#c69c3f"/>
+  <!-- Calendar icon -->
+  <rect fill="none" stroke="#2d4a2e" stroke-width="2" x="545" y="390" width="40" height="40" rx="4"/>
+  <rect fill="#2d4a2e" x="545" y="390" width="40" height="10" rx="4"/>
+  <text x="565" y="420" font-family="sans-serif" font-size="18" fill="#3a3226" text-anchor="middle" font-weight="bold">15</text>
+  <!-- Labels -->
+  <rect fill="#c69c3f" opacity="0.3" x="600" y="395" width="70" height="30" rx="15"/>
+  <text x="635" y="415" font-family="sans-serif" font-size="12" fill="#3a3226" text-anchor="middle">Work</text>
+  <rect fill="#2d4a2e" opacity="0.3" x="680" y="395" width="80" height="30" rx="15"/>
+  <text x="720" y="415" font-family="sans-serif" font-size="12" fill="#3a3226" text-anchor="middle">Personal</text>
+  <!-- Checkmark burst -->
+  <circle cx="1050" cy="300" r="100" fill="#2d4a2e" opacity="0.15"/>
+  <path d="M 1000 300 L 1030 330 L 1100 250" fill="none" stroke="#2d4a2e" stroke-width="8" stroke-linecap="round"/>
+</svg>

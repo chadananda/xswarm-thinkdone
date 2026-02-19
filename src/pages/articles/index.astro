@@ -1,0 +1,1394 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import SiteNav from '../../components/SiteNav.astro';
+import BlogFooter from '../../components/blog/BlogFooter.astro';
+import '../../styles/blog.css';
+import { getCollection, getEntry } from 'astro:content';
+import { imgUrl } from '../../lib/imgix.js';
+//
+const allArticles = await getCollection('articles', ({ data }) => !data.draft);
+const sorted = allArticles.sort((a, b) => new Date(b.data.publishedAt).getTime() - new Date(a.data.publishedAt).getTime());
+//
+async function resolveAuthor(authorId: string) {
+  const author = await getEntry('authors', authorId);
+  return author ? { name: author.data.name, avatar: author.data.avatar } : { name: authorId, avatar: '' };
+}
+const articles = await Promise.all(sorted.map(async (a) => ({
+  title: a.data.title,
+  description: a.data.description,
+  type: a.data.type,
+  heroImage: a.data.heroImage,
+  author: await resolveAuthor(a.data.author),
+  publishedAt: a.data.publishedAt.toISOString(),
+  readingTime: a.data.readingTime,
+  slug: a.id,
+  tags: a.data.tags || [],
+})));
+//
+// Categorize articles
+const deepDives = articles.filter(a => a.type === 'deep-dive');
+const comparisons = articles.filter(a => a.type === 'comparison');
+const guides = articles.filter(a => a.type === 'methodology-guide' || a.type === 'roundup');
+const listicles = articles.filter(a => a.type === 'listicle');
+const insights = articles.filter(a => a.type === 'problem-solution' || a.type === 'thought-leadership' || a.type === 'how-to');
+// Featured: first 3 articles (regardless of type)
+const featured = articles.slice(0, 3);
+// Stats
+const reviewCount = deepDives.length;
+const totalMinutes = articles.reduce((sum, a) => {
+  const m = parseInt(a.readingTime) || 12;
+  return sum + m;
+}, 0);
+//
+// Helper: get hero image URL through imgix
+function heroSrc(path?: string, w = 1200, h = 600) {
+  return path ? imgUrl(path, { w, h, fit: 'crop' }) : '';
+}
+function avatarSrc(path?: string) {
+  return path ? imgUrl(path, { w: 64, h: 64, fit: 'crop', facepad: 2 }) : '';
+}
+// Helper: short label for article type
+function typeLabel(type: string): string {
+  const labels: Record<string, string> = {
+    'deep-dive': 'review',
+    'comparison': 'comparison',
+    'methodology-guide': 'guide',
+    'roundup': 'roundup',
+    'listicle': 'listicle',
+    'problem-solution': 'insight',
+    'thought-leadership': 'opinion',
+    'how-to': 'how-to',
+  };
+  return labels[type] || type.replace(/-/g, ' ');
+}
+// Helper: extract app names from comparison titles like "ThinkDone vs Todoist: subtitle"
+function parseVsNames(title: string): [string, string] {
+  const match = title.match(/(.+?)\s+vs\.?\s+(.+)/i);
+  if (!match) return [title, ''];
+  // Strip subtitles after colon (e.g. "Things 3: The Definitive Comparison" → "Things 3")
+  const nameA = match[1].trim().split(':')[0].trim();
+  const nameB = match[2].trim().split(':')[0].trim();
+  return [nameA, nameB];
+}
+---
+<BaseLayout title="Articles — ThinkDone" description="Honest reviews, deep dives, and practical guides to help you stop planning and start doing.">
+  <SiteNav links={[
+    { href: '/articles', label: 'Articles' },
+    { href: '/authors', label: 'Authors' },
+    { href: '/#pricing', label: 'Pricing' },
+  ]} />
+
+  {/* JSON-LD structured data for article collection */}
+  <script type="application/ld+json" set:html={JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    "name": "Articles — ThinkDone",
+    "description": "Honest reviews, deep dives, and practical strategies for building a productivity system that actually works.",
+    "url": "https://think-done.com/articles",
+    "mainEntity": {
+      "@type": "ItemList",
+      "numberOfItems": articles.length,
+      "itemListElement": articles.slice(0, 10).map((a, i) => ({
+        "@type": "ListItem",
+        "position": i + 1,
+        "url": `https://think-done.com/articles/${a.slug}`,
+        "name": a.title,
+      })),
+    },
+  })} />
+
+  <!-- ═══ HERO ═══ -->
+  <section class="ac-hero">
+    <h1>What if the problem isn't you?</h1>
+    <p class="ac-hero-sub">Most productivity advice focuses on the app. We focus on the system. These are the reviews, strategies, and deep dives that changed how we think about getting things done.</p>
+    {featured[0] && (
+      <a href={`/articles/${featured[0].slug}`} class="ac-hero-article" aria-label={`Read: ${featured[0].title}`}>
+        {featured[0].heroImage && (
+          <img src={heroSrc(featured[0].heroImage, 1400, 700)} alt="" class="ac-hero-article-bg" loading="eager" />
+        )}
+        <div class="ac-hero-article-overlay">
+          <span class="ac-type-pill">{typeLabel(featured[0].type)}</span>
+          <h2>{featured[0].title}</h2>
+          <p>{featured[0].description}</p>
+          <div class="ac-hero-article-meta">
+            {featured[0].author.avatar ? (
+              <img src={avatarSrc(featured[0].author.avatar)} alt={`Photo of ${featured[0].author.name}`} class="ac-avatar" />
+            ) : (
+              <span class="ac-avatar-placeholder">{featured[0].author.name.charAt(0)}</span>
+            )}
+            <span>{featured[0].author.name} · {featured[0].readingTime}</span>
+            <span class="ac-hero-link">Read the evidence →</span>
+          </div>
+        </div>
+      </a>
+    )}
+    <!-- Search -->
+    <div class="ac-search-wrap">
+      <svg class="ac-search-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="8.5" cy="8.5" r="6"/><line x1="13" y1="13" x2="18" y2="18"/></svg>
+      <input type="text" class="ac-search-input" placeholder="Search articles..." autocomplete="off" />
+    </div>
+    <div class="ac-search-results" aria-live="polite" style="display:none;width:100%;max-width:900px;margin:1.5rem auto 0;position:relative;overflow:hidden;z-index:4;"></div>
+    <!-- Angled bottom edge -->
+    <svg class="ac-divider-hero" aria-hidden="true" viewBox="0 0 1440 80" preserveAspectRatio="none"><path d="M0,0 L1440,60 L1440,80 L0,80 Z" fill="var(--color-paper)"/></svg>
+  </section>
+  <script type="application/json" id="ac-article-data" set:html={JSON.stringify(articles.map(a => ({
+    t: a.title,
+    d: a.description,
+    y: typeLabel(a.type),
+    a: a.author.name,
+    av: a.author.avatar ? imgUrl(a.author.avatar, { w: 48, h: 48, fit: 'crop', facepad: 2 }) : '',
+    r: a.readingTime,
+    s: a.slug,
+    g: a.tags,
+    h: a.heroImage ? imgUrl(a.heroImage, { w: 320, h: 180, fit: 'crop' }) : '',
+  })))} />
+
+  <!-- ═══ REVIEWS SECTION ═══ -->
+  {deepDives.length > 0 && (
+    <section class="ac-section ac-landscape blog-graph-bg">
+      <h2 class="ac-headline">We reviewed every major app so you don't have to</h2>
+      <div class="ac-river">
+        <div class="ac-stat-row">
+          <div class="ac-stat"><span class="ac-stat-num">{reviewCount}</span><span class="ac-stat-label">apps reviewed</span></div>
+          <div class="ac-stat"><span class="ac-stat-num">{totalMinutes}+</span><span class="ac-stat-label">min of reading</span></div>
+          <div class="ac-stat"><span class="ac-stat-num">1</span><span class="ac-stat-label">clear winner</span></div>
+        </div>
+
+        {/* Primary review — large hero card */}
+        {deepDives[0] && (
+          <a href={`/articles/${deepDives[0].slug}`} class="ac-river-hero" aria-label={`Read: ${deepDives[0].title}`}>
+            {deepDives[0].heroImage && <img src={heroSrc(deepDives[0].heroImage)} alt="" class="ac-river-hero-bg" loading="lazy" />}
+            <div class="ac-river-hero-overlay">
+              <span class="ac-type-pill">deep dive</span>
+              <p class="ac-pull-quote">"{deepDives[0].description}"</p>
+              <h3>{deepDives[0].title}</h3>
+              <div class="ac-meta-row">
+                {deepDives[0].author.avatar ? (
+                  <img src={avatarSrc(deepDives[0].author.avatar)} alt={deepDives[0].author.name} class="ac-avatar-sm" />
+                ) : (
+                  <span class="ac-avatar-placeholder-sm">{deepDives[0].author.name.charAt(0)}</span>
+                )}
+                <span>{deepDives[0].author.name} · {deepDives[0].readingTime}</span>
+                <span class="ac-read-link">Read full review →</span>
+              </div>
+            </div>
+          </a>
+        )}
+
+        {/* Two asymmetric cards */}
+        {deepDives.length > 2 && (
+          <div class="ac-river-pair">
+            {deepDives.slice(1, 3).map((article, i) => (
+              <a href={`/articles/${article.slug}`} class:list={['ac-river-card', i === 0 ? 'ac-river-card-tall' : 'ac-river-card-short']} aria-label={`Read: ${article.title}`}>
+                {article.heroImage && <img src={heroSrc(article.heroImage, 800, 500)} alt="" class="ac-river-card-bg" loading="lazy" />}
+                <div class="ac-river-card-inner">
+                  <span class="ac-type-pill">deep dive</span>
+                  <h3>{article.title}</h3>
+                  <p>{article.description}</p>
+                  <div class="ac-meta-row">
+                    {article.author.avatar ? (
+                      <img src={avatarSrc(article.author.avatar)} alt={article.author.name} class="ac-avatar-sm" />
+                    ) : (
+                      <span class="ac-avatar-placeholder-sm">{article.author.name.charAt(0)}</span>
+                    )}
+                    <span>{article.author.name} · {article.readingTime}</span>
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+        )}
+
+        {/* Cascade — remaining deep dives */}
+        {deepDives.length > 3 && (
+          <div class="ac-cascade">
+            {deepDives.slice(3).map(article => (
+              <a href={`/articles/${article.slug}`} class="ac-cascade-card" aria-label={`Read: ${article.title}`}>
+                {article.heroImage && <img src={heroSrc(article.heroImage, 600, 375)} alt="" class="ac-cascade-card-bg" loading="lazy" />}
+                <div class="ac-cascade-card-inner">
+                  <span class="ac-type-pill">deep dive</span>
+                  <h3>{article.title}</h3>
+                  <div class="ac-meta-row">
+                    {article.author.avatar ? (
+                      <img src={avatarSrc(article.author.avatar)} alt={article.author.name} class="ac-avatar-sm" />
+                    ) : (
+                      <span class="ac-avatar-placeholder-sm">{article.author.name.charAt(0)}</span>
+                    )}
+                    <span>{article.author.name} · {article.readingTime}</span>
+                  </div>
+                </div>
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <!-- Angled transition to interlude -->
+      <svg class="ac-divider-down" aria-hidden="true" viewBox="0 0 1440 60" preserveAspectRatio="none"><path d="M0,0 L1440,40 L1440,60 L0,60 Z" fill="var(--color-gold)"/></svg>
+    </section>
+  )}
+
+  <!-- ═══ INTERLUDE ═══ -->
+  {articles.length > 0 && (
+    <div class="ac-interlude">
+      <p>While you were reading reviews, <span class="ac-counter">2,847</span> people switched to ThinkDone.</p>
+      <a href="/#pricing" class="ac-interlude-btn">Try Free →</a>
+      <svg class="ac-divider-down" aria-hidden="true" viewBox="0 0 1440 60" preserveAspectRatio="none"><path d="M0,0 L1440,40 L1440,60 L0,60 Z" fill="var(--color-forest-dark)"/></svg>
+    </div>
+  )}
+
+  <!-- ═══ COMPARISONS ═══ -->
+  {comparisons.length > 0 && (
+    <section class="ac-section ac-versus">
+      <h2 class="ac-headline" style="color:white">The matchups that matter</h2>
+
+      {comparisons[0] && (() => {
+        const [nameA, nameB] = parseVsNames(comparisons[0].title);
+        return (
+          <a href={`/articles/${comparisons[0].slug}`} class="ac-vs-hero" aria-label={`Read: ${comparisons[0].title}`}>
+            <div class="ac-vs-side ac-vs-side-a"><span>{nameA}</span></div>
+            <div class="ac-vs-side ac-vs-side-b"><span>{nameB}</span></div>
+            <div class="ac-vs-badge">VS</div>
+            <div class="ac-vs-info">
+              <p>{comparisons[0].description}</p>
+              <span class="ac-read-link" style="color:var(--color-gold)">Read full comparison →</span>
+            </div>
+          </a>
+        );
+      })()}
+
+      {comparisons.slice(1).map(article => {
+        const [nameA, nameB] = parseVsNames(article.title);
+        return (
+          <a href={`/articles/${article.slug}`} class="ac-vs-mini" aria-label={`Read: ${article.title}`}>
+            <span class="ac-vs-mini-name">{nameA}</span>
+            <span class="ac-vs-mini-div">VS</span>
+            <span class="ac-vs-mini-name">{nameB}</span>
+            <span class="ac-vs-mini-meta">{article.author.name} · {article.readingTime}</span>
+          </a>
+        );
+      })}
+
+      <!-- Angled transition -->
+      <svg class="ac-divider-down" aria-hidden="true" viewBox="0 0 1440 80" preserveAspectRatio="none"><path d="M0,20 L1440,0 L1440,80 L0,80 Z" fill="var(--color-sage)"/></svg>
+    </section>
+  )}
+
+  <!-- ═══ METHODOLOGY / GUIDES ═══ -->
+  {guides.length > 0 && (
+    <section class="ac-section ac-method">
+      <h2 class="ac-headline" style="color:white">It's not just about the app</h2>
+
+      {guides.map(article => (
+        <a href={`/articles/${article.slug}`} class="ac-book-card" aria-label={`Read: ${article.title}`}>
+          {article.heroImage && <img src={heroSrc(article.heroImage, 1000, 500)} alt="" class="ac-book-card-bg" loading="lazy" />}
+          <div class="ac-book-card-inner">
+            <span class="ac-type-pill">{typeLabel(article.type)}</span>
+            <h3>{article.title}</h3>
+            <p>{article.description}</p>
+            <div class="ac-meta-row">
+              {article.author.avatar ? (
+                <img src={avatarSrc(article.author.avatar)} alt={article.author.name} class="ac-avatar-sm" />
+              ) : (
+                <span class="ac-avatar-placeholder-sm">{article.author.name.charAt(0)}</span>
+              )}
+              <span>{article.author.name} · {article.readingTime}</span>
+              <span class="ac-read-link">Read the guide →</span>
+            </div>
+          </div>
+        </a>
+      ))}
+
+      <!-- Angled transition -->
+      <svg class="ac-divider-down" aria-hidden="true" viewBox="0 0 1440 60" preserveAspectRatio="none"><path d="M0,40 L1440,0 L1440,60 L0,60 Z" fill="var(--color-paper)"/></svg>
+    </section>
+  )}
+
+  <!-- ═══ LISTICLES ═══ -->
+  {listicles.length > 0 && (
+    <section class="ac-section ac-listicles">
+      <h2 class="ac-headline">The roundups</h2>
+      {listicles.map(article => (
+        <a href={`/articles/${article.slug}`} class="ac-listicle-card" aria-label={`Read: ${article.title}`}>
+          {article.heroImage && <img src={heroSrc(article.heroImage, 1000, 400)} alt="" class="ac-listicle-card-bg" loading="lazy" />}
+          <div class="ac-listicle-card-inner">
+            <span class="ac-type-pill">{typeLabel(article.type)}</span>
+            <h3>{article.title}</h3>
+            <p>{article.description}</p>
+            <div class="ac-meta-row">
+              {article.author.avatar ? (
+                <img src={avatarSrc(article.author.avatar)} alt={article.author.name} class="ac-avatar-sm" />
+              ) : (
+                <span class="ac-avatar-placeholder-sm">{article.author.name.charAt(0)}</span>
+              )}
+              <span>{article.author.name} · {article.readingTime}</span>
+              <span class="ac-read-link">Read the full list →</span>
+            </div>
+          </div>
+        </a>
+      ))}
+      <svg class="ac-divider-down" aria-hidden="true" viewBox="0 0 1440 60" preserveAspectRatio="none"><path d="M0,0 L1440,40 L1440,60 L0,60 Z" fill="var(--color-paper-bright)"/></svg>
+    </section>
+  )}
+
+  <!-- ═══ TESTIMONIAL ═══ -->
+  <section class="ac-testimonial">
+    <div class="ac-testimonial-mark">&ldquo;</div>
+    <blockquote class="ac-testimonial-quote">I spent 6 months comparing apps. Then I found ThinkDone and stopped looking.</blockquote>
+    <cite class="ac-testimonial-author">— Jordan Kim, Product Designer</cite>
+    <a href="/#pricing" class="ac-testimonial-cta">Start your free trial →</a>
+    <svg class="ac-divider-down" aria-hidden="true" viewBox="0 0 1440 60" preserveAspectRatio="none"><path d="M0,40 L1440,0 L1440,60 L0,60 Z" fill="var(--color-forest-dark)"/></svg>
+  </section>
+
+  <!-- ═══ INSIGHTS ═══ -->
+  {insights.length > 0 && (
+    <section class="ac-section ac-insights">
+      <h2 class="ac-headline" style="color:white">What the research says</h2>
+      {insights.map(article => (
+        <a href={`/articles/${article.slug}`} class="ac-insight-card" aria-label={`Read: ${article.title}`}>
+          <span class="ac-type-pill">{typeLabel(article.type)}</span>
+          <h3>{article.title}</h3>
+          <p>{article.description}</p>
+          <div class="ac-meta-row">
+            {article.author.avatar ? (
+              <img src={avatarSrc(article.author.avatar)} alt={article.author.name} class="ac-avatar-sm" />
+            ) : (
+              <span class="ac-avatar-placeholder-sm">{article.author.name.charAt(0)}</span>
+            )}
+            <span>{article.author.name} · {article.readingTime}</span>
+            <span class="ac-read-link">Read the full analysis →</span>
+          </div>
+        </a>
+      ))}
+    </section>
+  )}
+
+  <!-- ═══ FINAL CTA ═══ -->
+  <section class="ac-final-cta">
+    <svg class="ac-divider-top" aria-hidden="true" viewBox="0 0 1440 60" preserveAspectRatio="none"><path d="M0,60 L1440,60 L1440,0 L0,40 Z" fill="var(--color-forest-dark)"/></svg>
+    <h2>Done is the engine of more.</h2>
+    <p class="ac-final-tagline">ThinkDone — AI daily planning that actually works.</p>
+    <div class="ac-final-buttons">
+      <a href="/#pricing" class="ac-btn ac-btn-gold">Start Free</a>
+      <a href="/#features" class="ac-btn ac-btn-outline">See How It Works</a>
+    </div>
+    <p class="ac-fine-print">No credit card required</p>
+  </section>
+
+  <!-- Back to top -->
+  <button class="ac-back-to-top" aria-label="Back to top" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
+  <BlogFooter />
+</BaseLayout>
+
+<style>
+/* ═══ ARTICLES COLLECTION ═══ */
+
+/* ── OVERLAY TEXT SHADOW ── */
+/* All white text over image overlays gets a subtle black edge for readability */
+.ac-hero-article-overlay,
+.ac-river-hero-overlay,
+.ac-river-card-inner,
+.ac-cascade-card-inner,
+.ac-book-card-inner,
+.ac-listicle-card-inner,
+.ac-vs-info,
+.ac-vs-side {
+  text-shadow: 0 1px 4px rgba(0,0,0,0.5), 0 0 1px rgba(0,0,0,0.3);
+}
+
+/* ── OVERLAY FIT ── */
+/* Prevent overlays from growing taller than their card */
+.ac-hero-article-overlay,
+.ac-river-hero-overlay,
+.ac-river-card-inner,
+.ac-cascade-card-inner,
+.ac-book-card-inner,
+.ac-listicle-card-inner,
+.ac-vs-info {
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  box-sizing: border-box;
+}
+/* Title and description shrink first; pill and meta stay visible */
+.ac-hero-article-overlay h2,
+.ac-hero-article-overlay h3,
+.ac-river-hero-overlay h3,
+.ac-river-card-inner h3,
+.ac-cascade-card-inner h3,
+.ac-book-card-inner h3,
+.ac-listicle-card-inner h3 {
+  flex-shrink: 1;
+  min-height: 0;
+}
+.ac-hero-article-overlay p,
+.ac-river-hero-overlay p,
+.ac-river-card-inner p,
+.ac-book-card-inner p,
+.ac-listicle-card-inner p,
+.ac-vs-info p {
+  flex-shrink: 2;
+  min-height: 0;
+}
+.ac-type-pill,
+.ac-meta-row,
+.ac-hero-article-meta {
+  flex-shrink: 0;
+}
+
+/* ── TYPE PILL ── */
+.ac-type-pill {
+  display: inline-block;
+  font-family: var(--font-ui);
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 0.25rem 0.75rem;
+  border: none;
+  border-radius: 50px;
+  color: #fff;
+  background: rgba(15,31,24,0.7);
+  backdrop-filter: blur(4px);
+  margin-bottom: 0.5rem;
+  width: fit-content;
+  text-shadow: none;
+}
+
+/* ── HERO ── */
+.ac-hero {
+  position: relative;
+  min-height: 90vh;
+  background: var(--color-forest-dark);
+  color: #fff;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 7rem 2rem 6rem;
+  overflow: hidden;
+}
+.ac-hero h1 {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 8vw, 7rem);
+  margin-bottom: 1.5rem;
+  line-height: 1.1;
+}
+.ac-hero-sub {
+  font-size: 1.3rem;
+  max-width: 600px;
+  margin-bottom: 3rem;
+  opacity: 0.85;
+}
+/* Featured article in hero */
+.ac-hero-article {
+  position: relative;
+  width: 100%;
+  max-width: 1100px;
+  border-radius: 16px;
+  overflow: hidden;
+  text-decoration: none;
+  color: #fff;
+  display: block;
+  min-height: 320px;
+  background: var(--color-forest);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+.ac-hero-article:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 48px rgba(0,0,0,0.3);
+}
+.ac-hero-article-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.8;
+}
+.ac-hero-article-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  padding: 1rem 3rem 2rem;
+  background: linear-gradient(transparent 0%, rgba(15,31,24,0.3) 40%, rgba(15,31,24,0.88) 70%, rgba(15,31,24,0.95) 100%);
+  text-align: left;
+}
+.ac-hero-article-overlay h2 {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  margin-bottom: 0.5rem;
+  line-height: 1.1;
+}
+.ac-hero-article-overlay p {
+  font-size: 1.05rem;
+  opacity: 0.9;
+  max-width: 700px;
+  margin-bottom: 0.75rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ac-hero-article-meta {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+  font-size: 0.95rem;
+  opacity: 0.9;
+}
+.ac-hero-link {
+  color: var(--color-gold);
+  font-weight: 600;
+}
+/* Dividers */
+.ac-divider-hero,
+.ac-divider-down,
+.ac-divider-top {
+  display: block;
+  width: 100%;
+  position: absolute;
+  left: 0;
+  pointer-events: none;
+}
+.ac-divider-hero {
+  bottom: -1px;
+  height: 80px;
+}
+.ac-divider-down {
+  bottom: -1px;
+  height: 60px;
+}
+.ac-divider-top {
+  top: -1px;
+  height: 60px;
+}
+
+/* ── AVATARS ── */
+.ac-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255,255,255,0.4);
+  flex-shrink: 0;
+}
+.ac-avatar-sm {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(255,255,255,0.3);
+  flex-shrink: 0;
+}
+.ac-avatar-placeholder, .ac-avatar-placeholder-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--color-forest);
+  color: white;
+  font-family: var(--font-display);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.ac-avatar-placeholder { width: 40px; height: 40px; font-size: 1.1rem; }
+.ac-avatar-placeholder-sm { width: 28px; height: 28px; font-size: 0.8rem; }
+
+/* ── SHARED ── */
+.ac-section {
+  position: relative;
+  padding: 5rem 2rem 6rem;
+  overflow: hidden;
+}
+.ac-headline {
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  text-align: center;
+  margin-bottom: 3rem;
+  line-height: 1.15;
+  color: var(--color-forest-dark);
+}
+.ac-meta-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  color: inherit;
+  opacity: 0.85;
+  flex-wrap: wrap;
+}
+.ac-read-link {
+  color: var(--color-gold);
+  font-weight: 600;
+}
+
+/* ── REVIEWS / LANDSCAPE ── */
+.ac-landscape {
+  background: var(--color-paper);
+  padding-top: 4rem;
+}
+.ac-river {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+.ac-stat-row {
+  display: flex;
+  justify-content: center;
+  gap: 3rem;
+  margin-bottom: 3rem;
+  flex-wrap: wrap;
+}
+.ac-stat {
+  text-align: center;
+}
+.ac-stat-num {
+  display: block;
+  font-family: var(--font-mono);
+  font-size: 2.5rem;
+  font-weight: 500;
+  color: var(--color-accent);
+}
+.ac-stat-label {
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  color: var(--color-ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+/* Primary review hero */
+.ac-river-hero {
+  display: block;
+  position: relative;
+  width: 100%;
+  min-height: 420px;
+  border-radius: 16px;
+  overflow: hidden;
+  margin-bottom: 2rem;
+  text-decoration: none;
+  color: #fff;
+  background: linear-gradient(135deg, var(--color-forest), var(--color-sage));
+}
+.ac-river-hero-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.75;
+}
+.ac-river-hero-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  padding: 1rem 3rem 2rem;
+  background: linear-gradient(transparent 0%, rgba(15,31,24,0.3) 40%, rgba(15,31,24,0.88) 70%, rgba(15,31,24,0.95) 100%);
+}
+.ac-river-hero-overlay h3 {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  margin-bottom: 1rem;
+  line-height: 1.1;
+}
+.ac-pull-quote {
+  font-size: 1rem;
+  font-style: italic;
+  opacity: 0.9;
+  max-width: 700px;
+  margin-bottom: 1rem;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* Asymmetric pair */
+.ac-river-pair {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+.ac-river-card {
+  position: relative;
+  display: block;
+  border-radius: 12px;
+  overflow: hidden;
+  text-decoration: none;
+  color: #fff;
+  background: var(--color-forest-dark);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+.ac-river-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.2);
+}
+.ac-river-card-tall { min-height: 440px; }
+.ac-river-card-short { min-height: 380px; }
+.ac-river-card-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.75;
+}
+.ac-river-card-inner {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  padding: 0.75rem 1.75rem 1.5rem;
+  background: linear-gradient(transparent 0%, rgba(15,31,24,0.3) 35%, rgba(15,31,24,0.88) 65%, rgba(15,31,24,0.95) 100%);
+}
+.ac-river-card-inner h3 {
+  font-family: var(--font-display);
+  font-size: 1.6rem;
+  margin-bottom: 0.4rem;
+  line-height: 1.15;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ac-river-card-inner p {
+  font-size: 0.9rem;
+  opacity: 0.85;
+  margin-bottom: 0.4rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* Cascade grid — remaining reviews */
+.ac-cascade {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+.ac-cascade-card {
+  position: relative;
+  display: block;
+  border-radius: 12px;
+  overflow: hidden;
+  text-decoration: none;
+  color: #fff;
+  background: var(--color-forest-dark);
+  min-height: 340px;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+.ac-cascade-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.2);
+}
+.ac-cascade-card-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.7;
+}
+.ac-cascade-card-inner {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  padding: 0.75rem 1.5rem 1.5rem;
+  background: linear-gradient(transparent 0%, rgba(15,31,24,0.3) 35%, rgba(15,31,24,0.88) 65%, rgba(15,31,24,0.95) 100%);
+}
+.ac-cascade-card-inner h3 {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  margin-bottom: 0.4rem;
+  line-height: 1.15;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── INTERLUDE ── */
+.ac-interlude {
+  position: relative;
+  background: linear-gradient(135deg, var(--color-gold), var(--color-accent));
+  color: #fff;
+  padding: 2.5rem 2rem 4rem;
+  text-align: center;
+  font-size: 1.3rem;
+  overflow: hidden;
+}
+.ac-counter {
+  font-family: var(--font-mono);
+  font-size: 2rem;
+  font-weight: 600;
+  margin: 0 0.3rem;
+}
+.ac-interlude-btn {
+  display: inline-block;
+  margin-top: 1rem;
+  padding: 0.7rem 2rem;
+  background: #fff;
+  color: var(--color-accent);
+  border-radius: 50px;
+  text-decoration: none;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 0.95rem;
+  transition: transform 0.2s;
+}
+.ac-interlude-btn:hover { transform: scale(1.05); }
+
+/* ── COMPARISONS ── */
+.ac-versus {
+  background: var(--color-forest-dark);
+  color: #fff;
+  padding-bottom: 7rem;
+}
+.ac-vs-hero {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  position: relative;
+  max-width: 1100px;
+  margin: 0 auto 2rem;
+  border-radius: 16px;
+  overflow: hidden;
+  text-decoration: none;
+  color: #fff;
+  min-height: 350px;
+  transition: transform 0.3s;
+}
+.ac-vs-hero:hover { transform: scale(1.01); }
+.ac-vs-side {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3.5rem);
+  padding: 3rem 2rem;
+}
+.ac-vs-side-a { background: linear-gradient(135deg, var(--color-sage), var(--color-forest)); }
+.ac-vs-side-b { background: linear-gradient(135deg, var(--color-accent), #6d3710); }
+.ac-vs-badge {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #fff;
+  color: var(--color-forest-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 2.5rem;
+  font-weight: 700;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+  z-index: 3;
+}
+.ac-vs-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 1.5rem 2rem 2rem;
+  background: linear-gradient(transparent, rgba(0,0,0,0.7));
+  z-index: 2;
+  text-align: center;
+}
+.ac-vs-info p {
+  font-size: 0.9rem;
+  opacity: 0.85;
+  max-width: 600px;
+  margin: 0 auto 0.5rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.ac-vs-mini {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  max-width: 800px;
+  margin: 0 auto 1rem;
+  padding: 1.5rem 2rem;
+  background: rgba(255,255,255,0.06);
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.1);
+  text-decoration: none;
+  color: #fff;
+  transition: background 0.2s;
+}
+.ac-vs-mini:hover { background: rgba(255,255,255,0.12); }
+.ac-vs-mini-name {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+}
+.ac-vs-mini-div {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  color: var(--color-gold);
+}
+.ac-vs-mini-meta {
+  font-family: var(--font-ui);
+  font-size: 0.8rem;
+  opacity: 0.6;
+}
+
+/* ── METHOD/GUIDES ── */
+.ac-method {
+  background: linear-gradient(180deg, var(--color-sage), var(--color-forest));
+  color: #fff;
+  padding-bottom: 7rem;
+}
+.ac-book-card {
+  display: block;
+  position: relative;
+  max-width: 1000px;
+  margin: 0 auto 2rem;
+  border-radius: 16px;
+  overflow: hidden;
+  text-decoration: none;
+  color: #fff;
+  min-height: 280px;
+  background: rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.15);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+.ac-book-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+}
+.ac-book-card-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.6;
+}
+.ac-book-card-inner {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  padding: 1rem 3rem 2rem;
+  background: linear-gradient(transparent 0%, rgba(15,31,24,0.3) 40%, rgba(15,31,24,0.88) 70%, rgba(15,31,24,0.95) 100%);
+}
+.ac-book-card-inner h3 {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  margin-bottom: 0.75rem;
+  line-height: 1.2;
+}
+.ac-book-card-inner p {
+  font-size: 1rem;
+  opacity: 0.85;
+  max-width: 700px;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── LISTICLES ── */
+.ac-listicles {
+  background: var(--color-paper);
+}
+.ac-listicle-card {
+  display: block;
+  position: relative;
+  max-width: 1000px;
+  margin: 0 auto 2rem;
+  border-radius: 16px;
+  overflow: hidden;
+  text-decoration: none;
+  color: #fff;
+  min-height: 260px;
+  background: var(--color-forest-dark);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+.ac-listicle-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0,0,0,0.2);
+}
+.ac-listicle-card-bg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.7;
+}
+.ac-listicle-card-inner {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 2;
+  padding: 1rem 2.5rem 2rem;
+  background: linear-gradient(transparent 0%, rgba(15,31,24,0.3) 40%, rgba(15,31,24,0.88) 70%, rgba(15,31,24,0.95) 100%);
+}
+.ac-listicle-card-inner h3 {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  margin: 0.75rem 0;
+  line-height: 1.2;
+}
+.ac-listicle-card-inner p {
+  font-size: 1rem;
+  opacity: 0.85;
+  max-width: 700px;
+  margin-bottom: 1rem;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── TESTIMONIAL ── */
+.ac-testimonial {
+  position: relative;
+  background: var(--color-paper-bright);
+  padding: 6rem 2rem 7rem;
+  text-align: center;
+  overflow: hidden;
+}
+.ac-testimonial-mark {
+  font-family: var(--font-display);
+  font-size: 12rem;
+  line-height: 0.8;
+  color: var(--color-gold);
+  opacity: 0.15;
+  position: absolute;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.ac-testimonial-quote {
+  font-family: var(--font-display);
+  font-size: clamp(1.8rem, 4vw, 3rem);
+  line-height: 1.35;
+  color: var(--color-forest-dark);
+  max-width: 800px;
+  margin: 0 auto;
+  border: none;
+  padding: 0;
+  position: relative;
+  z-index: 1;
+}
+.ac-testimonial-author {
+  display: block;
+  margin-top: 1.5rem;
+  font-family: var(--font-ui);
+  font-size: 1rem;
+  color: var(--color-ink-muted);
+  font-style: normal;
+}
+.ac-testimonial-cta {
+  display: inline-block;
+  margin-top: 2rem;
+  padding: 1rem 2.5rem;
+  background: var(--color-accent);
+  color: #fff;
+  border-radius: 50px;
+  text-decoration: none;
+  font-family: var(--font-ui);
+  font-size: 1.1rem;
+  font-weight: 600;
+  transition: transform 0.2s;
+}
+.ac-testimonial-cta:hover { transform: scale(1.04); }
+
+/* ── INSIGHTS ── */
+.ac-insights {
+  background: linear-gradient(180deg, var(--color-forest-dark), #1a1410);
+  color: #fff;
+}
+.ac-insight-card {
+  display: block;
+  max-width: 900px;
+  margin: 0 auto 2rem;
+  padding: 2.5rem;
+  background: rgba(184, 134, 11, 0.08);
+  border-left: 5px solid var(--color-gold);
+  border-radius: 8px;
+  text-decoration: none;
+  color: #fff;
+  transition: background 0.2s;
+}
+.ac-insight-card:hover {
+  background: rgba(184, 134, 11, 0.15);
+}
+.ac-insight-card h3 {
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 3vw, 2.4rem);
+  color: var(--color-gold);
+  margin-bottom: 0.75rem;
+  line-height: 1.2;
+}
+.ac-insight-card p {
+  font-size: 1.05rem;
+  opacity: 0.85;
+  line-height: 1.6;
+  margin-bottom: 1rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ── FINAL CTA ── */
+.ac-final-cta {
+  position: relative;
+  background: var(--color-forest-darkest);
+  color: #fff;
+  text-align: center;
+  padding: 8rem 2rem 5rem;
+}
+.ac-final-cta h2 {
+  font-family: var(--font-display);
+  font-size: clamp(3rem, 6vw, 5.5rem);
+  margin-bottom: 1rem;
+  line-height: 1.1;
+}
+.ac-final-tagline {
+  font-size: 1.5rem;
+  margin-bottom: 3rem;
+  opacity: 0.85;
+}
+.ac-final-buttons {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+.ac-btn {
+  padding: 1rem 2.5rem;
+  border-radius: 50px;
+  text-decoration: none;
+  font-family: var(--font-ui);
+  font-size: 1.1rem;
+  font-weight: 600;
+  transition: transform 0.2s;
+  display: inline-block;
+}
+.ac-btn:hover { transform: scale(1.04); }
+.ac-btn-gold { background: var(--color-gold); color: #fff; }
+.ac-btn-outline { background: transparent; color: #fff; border: 2px solid rgba(255,255,255,0.4); }
+.ac-fine-print {
+  font-family: var(--font-ui);
+  font-size: 0.85rem;
+  opacity: 0.5;
+}
+
+/* ── FOCUS STYLES ── */
+.ac-hero-article:focus-visible,
+.ac-river-hero:focus-visible,
+.ac-river-card:focus-visible,
+.ac-cascade-card:focus-visible,
+.ac-vs-hero:focus-visible,
+.ac-vs-mini:focus-visible,
+.ac-book-card:focus-visible,
+.ac-listicle-card:focus-visible,
+.ac-insight-card:focus-visible,
+.ac-btn:focus-visible,
+.ac-interlude-btn:focus-visible,
+.ac-testimonial-cta:focus-visible {
+  outline: 3px solid var(--color-gold);
+  outline-offset: 3px;
+}
+
+/* ── BACK TO TOP ── */
+.ac-back-to-top {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid var(--color-ink-faint);
+  background: var(--color-paper);
+  color: var(--color-ink);
+  font-size: 1.2rem;
+  cursor: pointer;
+  z-index: 50;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s, transform 0.2s;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+.ac-back-to-top.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+.ac-back-to-top:hover {
+  transform: translateY(-2px);
+  background: var(--color-forest-dark);
+  color: white;
+  border-color: var(--color-forest-dark);
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 768px) {
+  .ac-hero { min-height: 80vh; padding: 6rem 1.5rem 5rem; }
+  .ac-hero-article-overlay { padding: 2rem; }
+  .ac-river-pair { grid-template-columns: 1fr; }
+  .ac-river-card-tall, .ac-river-card-short { min-height: 260px; }
+  .ac-cascade { grid-template-columns: 1fr; }
+  .ac-vs-hero { grid-template-columns: 1fr; min-height: auto; }
+  .ac-vs-side { padding: 2rem; font-size: 1.8rem; }
+  .ac-vs-badge {
+    width: 50px;
+    height: 50px;
+    font-size: 1.4rem;
+    /* Reposition to the seam between stacked panels */
+    top: auto;
+    bottom: 50%;
+    transform: translate(-50%, 50%);
+  }
+  .ac-vs-info { position: relative; background: rgba(0,0,0,0.7); }
+  .ac-vs-mini { flex-wrap: wrap; gap: 1rem; justify-content: center; }
+  .ac-book-card-inner { padding: 2rem; }
+  .ac-stat-row { gap: 1.5rem; }
+  .ac-insight-card { padding: 1.5rem; }
+  .ac-listicle-card-inner { padding: 1.5rem; }
+  .ac-search-wrap { max-width: 100%; }
+}
+
+/* ── SEARCH (inside hero) ── */
+.ac-search-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  margin: 2rem auto 0;
+  z-index: 4;
+}
+.ac-search-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  color: rgba(255,255,255,0.5);
+  pointer-events: none;
+}
+.ac-search-input {
+  width: 100%;
+  padding: 0.7rem 1rem 0.7rem 2.6rem;
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 50px;
+  background: rgba(255,255,255,0.1);
+  backdrop-filter: blur(8px);
+  font-family: var(--font-ui);
+  font-size: 0.9rem;
+  color: #fff;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+.ac-search-input::placeholder {
+  color: rgba(255,255,255,0.45);
+}
+.ac-search-input:focus {
+  border-color: rgba(255,255,255,0.5);
+  background: rgba(255,255,255,0.15);
+}
+</style>
+
+<script>
+  // Back-to-top visibility
+  const btn = document.querySelector('.ac-back-to-top');
+  if (btn) {
+    window.addEventListener('scroll', () => {
+      btn.classList.toggle('visible', window.scrollY > 600);
+    }, { passive: true });
+  }
+
+  // Live article search
+  const input = document.querySelector('.ac-search-input');
+  const results = document.querySelector('.ac-search-results');
+  const dataEl = document.getElementById('ac-article-data');
+  if (input && results && dataEl) {
+    const articles = JSON.parse(dataEl.textContent || '[]');
+    // Inject component styles once
+    const sheet = document.createElement('style');
+    sheet.textContent = `
+      .sr-track{display:flex;gap:1rem;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;padding:0.25rem 0 0.5rem;scrollbar-width:none}
+      .sr-track::-webkit-scrollbar{display:none}
+      .sr-card{flex:0 0 190px;scroll-snap-align:start;display:flex;flex-direction:column;border-radius:0.6rem;overflow:hidden;background:rgba(255,255,255,0.08);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,0.1);text-decoration:none;color:#fff;transition:transform 0.2s,background 0.2s}
+      .sr-card:hover{transform:translateY(-3px);background:rgba(255,255,255,0.15)}
+      .sr-img-wrap{position:relative;aspect-ratio:16/10;overflow:hidden;background:rgba(255,255,255,0.05)}
+      .sr-img-wrap img{width:100%;height:100%;object-fit:cover;display:block}
+      .sr-badge{position:absolute;top:0.35rem;left:0.35rem;font-family:var(--font-ui);font-size:0.5rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;padding:0.12rem 0.45rem;border-radius:50px;background:rgba(15,31,24,0.75);backdrop-filter:blur(4px);color:#fff}
+      .sr-body{padding:0.45rem 0.55rem 0.5rem;display:flex;flex-direction:column;gap:0.2rem}
+      .sr-title{font-family:var(--font-display);font-size:0.95rem;line-height:1.15;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+      .sr-meta{font-family:var(--font-ui);font-size:0.65rem;opacity:0.6;display:flex;align-items:center;gap:0.3rem}
+      .sr-meta img{width:16px;height:16px;border-radius:50%;object-fit:cover;border:1px solid rgba(255,255,255,0.2)}
+      .sr-empty{text-align:center;padding:1.5rem;font-family:var(--font-hand);font-size:1rem;color:rgba(255,255,255,0.5)}
+      @media(max-width:768px){.sr-card{flex:0 0 155px}.sr-title{font-size:0.85rem}}
+    `;
+    results.appendChild(sheet);
+    let debounce;
+    input.addEventListener('input', () => {
+      clearTimeout(debounce);
+      debounce = setTimeout(() => {
+        const q = input.value.trim().toLowerCase();
+        // Keep the style element, clear everything else
+        const styleEl = results.querySelector('style');
+        results.innerHTML = '';
+        if (styleEl) results.appendChild(styleEl);
+        if (!q) { results.style.display = 'none'; return; }
+        const matches = articles.filter(a =>
+          a.t.toLowerCase().includes(q) ||
+          a.d.toLowerCase().includes(q) ||
+          a.a.toLowerCase().includes(q) ||
+          a.y.toLowerCase().includes(q) ||
+          (a.g || []).some(tag => tag.toLowerCase().includes(q))
+        );
+        results.style.display = 'block';
+        if (matches.length === 0) {
+          results.insertAdjacentHTML('beforeend', '<div class="sr-empty">No articles matched your search</div>');
+        } else {
+          results.insertAdjacentHTML('beforeend', `<div class="sr-track">${matches.map(a => `
+            <a href="/articles/${a.s}" class="sr-card">
+              <div class="sr-img-wrap">
+                ${a.h ? `<img src="${a.h}" alt="" loading="lazy" />` : ''}
+                <span class="sr-badge">${a.y}</span>
+              </div>
+              <div class="sr-body">
+                <span class="sr-title">${a.t}</span>
+                <span class="sr-meta">
+                  ${a.av ? `<img src="${a.av}" alt="" />` : ''}
+                  ${a.a} · ${a.r}
+                </span>
+              </div>
+            </a>
+          `).join('')}</div>`);
+        }
+      }, 150);
+    });
+  }
+</script>

@@ -1,0 +1,41 @@
+---
+import '../styles/global.css';
+import GoogleOneTap from '../components/GoogleOneTap.astro';
+interface Props {
+  title: string;
+  description: string;
+  ogImage?: string;
+  ogType?: string;
+}
+const { title, description, ogImage = '/icon-1024.png', ogType = 'website' } = Astro.props;
+---
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{title}</title>
+  <meta name="description" content={description}>
+  <meta property="og:title" content={title}>
+  <meta property="og:description" content={description}>
+  <meta property="og:type" content={ogType}>
+  <meta property="og:image" content={ogImage}>
+  <meta name="theme-color" content="#0f1f18">
+  <link rel="canonical" href={`https://think-done.com${Astro.url.pathname}`}>
+  <link rel="icon" type="image/png" href="/favicon-32.png" sizes="32x32">
+  <link rel="icon" type="image/png" href="/favicon.png" sizes="192x192">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="preload" href="/fonts/caveat-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/patrick-hand-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/fonts/ibm-plex-mono-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <slot name="head" />
+</head>
+<body>
+  <script is:inline>
+    (function(){var t=localStorage.getItem('td-theme');if(t)document.documentElement.style.colorScheme=t;})();
+  </script>
+  <slot />
+  <GoogleOneTap />
+</body>
+</html>

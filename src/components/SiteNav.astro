@@ -1,0 +1,222 @@
+---
+import { QUOTES } from '../lib/quotes.js';
+import UserMenu from './UserMenu.astro';
+
+interface Props {
+  links?: { href: string; label: string }[];
+  solid?: boolean;
+}
+
+const {
+  links = [
+    { href: '/articles', label: 'Articles' },
+    { href: '/authors', label: 'Team' },
+    { href: '/#pricing', label: 'Pricing' },
+  ],
+  solid = false,
+} = Astro.props;
+
+const quotesJson = JSON.stringify(QUOTES);
+---
+
+<nav id="site-nav" class:list={['site-nav', solid && 'site-nav-solid']}>
+  <div class="site-nav-inner">
+    <div class="site-nav-left">
+      <a href="/" class="site-nav-brand">
+        <img src="/favicon.png" alt="ThinkDone" width="32" height="32">
+        <div class="site-nav-brand-col">
+          <span class="site-nav-text">Think<span style="opacity:0.35">-</span><span class="text-gold">Done</span></span>
+          <div class="site-nav-quote" id="site-quote"></div>
+        </div>
+      </a>
+    </div>
+    <div class="site-nav-right">
+      <div class="site-nav-links">
+        {links.map(link => (
+          <a href={link.href}>{link.label}</a>
+        ))}
+      </div>
+      <UserMenu lightText={!solid} />
+    </div>
+  </div>
+</nav>
+
+<script is:inline define:vars={{ quotesJson, solid }}>
+  // Scroll toggle (only for non-solid navs)
+  if (!solid) {
+    window.addEventListener('scroll', () => {
+      const nav = document.getElementById('site-nav');
+      if (nav) nav.classList.toggle('site-nav-solid', window.scrollY > 50);
+    });
+  }
+
+  // Typewriter quote
+  const QUOTES = JSON.parse(quotesJson);
+  let qi = Math.floor(Math.random() * QUOTES.length);
+  const quoteEl = document.getElementById('site-quote');
+  if (quoteEl) {
+    const TYPE_SPEED = 38;
+    const UNTYPE_SPEED = 22;
+    const PAUSE = 8000;
+    let full = '', pos = 0, typing = true;
+
+    function tick() {
+      if (typing) {
+        pos++;
+        quoteEl.textContent = full.slice(0, pos);
+        if (pos < full.length) setTimeout(tick, TYPE_SPEED);
+        else setTimeout(function() { typing = false; tick(); }, PAUSE);
+      } else {
+        pos--;
+        quoteEl.textContent = pos > 0 ? full.slice(0, pos) : '';
+        if (pos > 0) setTimeout(tick, UNTYPE_SPEED);
+        else { qi = (qi + 1) % QUOTES.length; startQuote(); }
+      }
+    }
+
+    function startQuote() {
+      full = QUOTES[qi]; pos = 0; typing = true; tick();
+    }
+
+    startQuote();
+  }
+
+  // Smooth scroll for anchor links
+  document.querySelectorAll('.site-nav a[href^="#"]').forEach(function(a) {
+    a.addEventListener('click', function(e) {
+      var t = document.querySelector(a.getAttribute('href'));
+      if (t) { e.preventDefault(); t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    });
+  });
+</script>
+
+<style>
+  .site-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 50;
+    transition: all 0.3s;
+  }
+  .site-nav-inner {
+    max-width: 80rem;
+    margin: 0 auto;
+    padding: 0.5rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .site-nav-left {
+    flex: 1;
+    min-width: 0;
+  }
+  .site-nav-brand {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    flex-shrink: 0;
+  }
+  .site-nav-brand img {
+    width: auto;
+    height: 56px;
+    margin: -4px 0;
+    position: relative;
+    left: -4px;
+    border-radius: 10px;
+    transition: transform 0.2s, filter 0.2s;
+    filter: drop-shadow(0 1px 4px rgba(0,0,0,0.15));
+    animation: icon-breathe 4s ease-in-out infinite;
+  }
+  .site-nav-brand:hover img {
+    transform: scale(1.08) rotate(-2deg);
+    filter: drop-shadow(0 3px 8px rgba(0,0,0,0.25));
+    animation-play-state: paused;
+  }
+  @keyframes icon-breathe {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-2px) rotate(1deg); }
+  }
+  .site-nav-brand-col {
+    min-width: 0;
+    padding-top: 2px;
+  }
+  .site-nav-text {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: #fff;
+    transition: color 0.3s;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .site-nav-text .text-gold {
+    color: var(--color-gold);
+  }
+  .site-nav-quote {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: 1.25rem;
+    color: rgba(255,255,255,0.6);
+    min-height: 1.2em;
+    line-height: 1.1;
+    margin-top: -0.1rem;
+    transition: color 0.3s;
+  }
+  .site-nav-right {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-shrink: 0;
+  }
+  .site-nav-links {
+    display: none;
+    gap: 1.8rem;
+    font-family: var(--font-ui);
+    font-size: 0.85rem;
+  }
+  .site-nav-links a {
+    color: rgba(255,255,255,0.75);
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .site-nav-links a:hover { color: #fff; }
+  @media (min-width: 768px) {
+    .site-nav-links { display: flex; }
+  }
+  /* Solid state (scrolled or prop) */
+  .site-nav-solid {
+    background: color-mix(in srgb, var(--color-paper) 98%, transparent);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  }
+  .site-nav-solid .site-nav-text {
+    color: var(--color-ink);
+  }
+  .site-nav-solid .site-nav-quote {
+    opacity: 1;
+    color: var(--color-ink-light);
+  }
+  .site-nav-solid .site-nav-links a {
+    color: var(--color-forest);
+  }
+  .site-nav-solid .site-nav-links a:hover {
+    color: var(--color-accent);
+  }
+  /* Override UserMenu light colors when nav goes solid */
+  .site-nav-solid :global(.user-menu-light .user-menu-btn) {
+    color: var(--color-ink-muted);
+    border-color: var(--color-ink-faint);
+  }
+  .site-nav-solid :global(.user-menu-light .user-menu-btn:hover) {
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+    background: rgba(139,69,19,0.05);
+  }
+
+  /* Hide quote on small screens */
+  @media (max-width: 640px) {
+    .site-nav-quote { display: none; }
+  }
+</style>

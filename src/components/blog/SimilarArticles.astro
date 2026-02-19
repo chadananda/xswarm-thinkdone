@@ -1,0 +1,26 @@
+---
+interface Props {
+  articles: Array<{ title: string; heroImage?: string; slug: string; readingTime?: string }>;
+}
+import { imgUrl } from '../../lib/imgix';
+const { articles } = Astro.props;
+const shown = articles.slice(0, 4);
+---
+{shown.length > 0 && (
+  <div class="similar-articles">
+    <p class="blog-toc-title" style="margin-top:2rem">Related Articles</p>
+    <div class="flex flex-col gap-3">
+      {shown.map(a => (
+        <a href={`/articles/${a.slug}`} class="similar-article-card">
+          {a.heroImage && (
+            <img src={imgUrl(a.heroImage, { w: 400, h: 100, fit: 'crop', crop: 'entropy', sharp: 20, con: 15 })} width="400" height="100" alt="" loading="lazy" />
+          )}
+          <div class="similar-article-body">
+            <p class="similar-article-title">{a.title}</p>
+            {a.readingTime && <span class="similar-article-meta">{a.readingTime}</span>}
+          </div>
+        </a>
+      ))}
+    </div>
+  </div>
+)}

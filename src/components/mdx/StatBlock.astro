@@ -1,0 +1,21 @@
+---
+interface Props {
+  number: string;
+  label: string;
+  source?: string;
+}
+const { number, label, source } = Astro.props;
+// Parse numeric value and suffix for counter animation
+const match = number.match(/^([\d,.]+)\s*(.*)$/);
+const numericValue = match ? match[1].replace(/,/g, '') : '';
+const suffix = match ? match[2] : '';
+---
+<div class="stat-block blog-reveal" data-reveal="scale">
+  <div
+    class="font-display font-bold leading-none relative z-10"
+    style="font-size:clamp(2.5rem,6vw,4.5rem);color:var(--color-gold);text-shadow:0 0 40px rgba(184,134,11,0.3)"
+    {...(numericValue ? { 'data-counter': numericValue, 'data-counter-suffix': suffix } : {})}
+  >{number}</div>
+  <p class="font-hand text-lg mt-3 mb-1 leading-snug relative z-10" style="color:rgba(244,239,230,0.85)">{label}</p>
+  {source && <p class="font-ui text-xs m-0 relative z-10" style="color:rgba(244,239,230,0.45)">{source}</p>}
+</div>

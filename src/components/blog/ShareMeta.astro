@@ -1,0 +1,36 @@
+---
+interface Props {
+  title: string; description: string; image?: string; url: string;
+  type: 'article' | 'website' | 'profile';
+  author?: string; publishedAt?: string; tags?: string[];
+}
+import { imgUrl } from '../../lib/imgix';
+const { title, description, image, url, type, author, publishedAt, tags } = Astro.props;
+const ogImage = image ? imgUrl(image, { w: 1200, h: 630, fit: 'crop' }) : '/icon-1024.png';
+const jsonLd = type === 'article' ? {
+  '@context': 'https://schema.org', '@type': 'Article',
+  headline: title, description, image: ogImage, url,
+  ...(author && { author: { '@type': 'Person', name: author } }),
+  ...(publishedAt && { datePublished: publishedAt }),
+  ...(tags?.length && { keywords: tags.join(', ') }),
+  publisher: { '@type': 'Organization', name: 'ThinkDone', url: 'https://think-done.com' }
+} : type === 'profile' ? {
+  '@context': 'https://schema.org', '@type': 'Person',
+  name: title, description, image: ogImage, url
+} : {
+  '@context': 'https://schema.org', '@type': 'WebSite',
+  name: title, description, url
+};
+---
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:image" content={ogImage} />
+<meta property="og:url" content={url} />
+<meta property="og:type" content={type} />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={ogImage} />
+{publishedAt && <meta property="article:published_time" content={publishedAt} />}
+{tags?.map(tag => <meta property="article:tag" content={tag} />)}
+<script type="application/ld+json" set:html={JSON.stringify(jsonLd)} />

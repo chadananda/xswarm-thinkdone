@@ -9,24 +9,45 @@
     "memory": "./src/memory.js"
   },
   "scripts": {
-    "dev": "astro dev",
+    "dev": "astro dev --port 3456",
     "build": "astro build",
     "preview": "astro preview",
+    "lint": "eslint src/",
     "test": "node tests/memory.test.js",
+    "test:e2e": "playwright test",
+    "security": "gitleaks-secret-scanner detect --source . --no-git --redact && npm audit --omit=dev && npx retire --path dist/ --outputformat text",
+    "predeploy": "./scripts/pre-deploy.sh",
+    "deploy": "wrangler pages deploy dist/",
     "setup": "node src/memory.js setup"
   },
   "dependencies": {
-    "@astrojs/node": "^9",
+    "@anthropic-ai/sdk": "^0.74.0",
+    "@astrojs/cloudflare": "^12.6.12",
+    "@astrojs/mdx": "^4.3.13",
+    "@astrojs/sitemap": "^3.7.0",
     "@astrojs/svelte": "^7",
     "@huggingface/transformers": "^3",
     "@libsql/client": "^0.14",
     "@tailwindcss/vite": "^4",
+    "@tursodatabase/database-wasm": "^0.4.4",
     "astro": "^5",
+    "better-sqlite3": "^12.6.2",
+    "howler": "^2.2.4",
     "svelte": "^5",
-    "tailwindcss": "^4"
+    "tailwindcss": "^4",
+    "ws": "^8.19.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.58.2",
-    "playwright": "^1.58.2"
+    "eslint": "^9.39.2",
+    "eslint-plugin-astro": "^1.5.0",
+    "eslint-plugin-security": "^3.0.1",
+    "eslint-plugin-svelte": "^3.14.0",
+    "gitleaks-secret-scanner": "^2.1.1",
+    "is-website-vulnerable": "^1.14.11",
+    "playwright": "^1.58.2",
+    "retire": "^5.4.2",
+    "seo-analyzer": "^3.2.0",
+    "wrangler": "^4"
   }
 }

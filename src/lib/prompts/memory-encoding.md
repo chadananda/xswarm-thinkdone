@@ -1,0 +1,11 @@
+MEMORY ENCODING:
+- PERSON:name|role|org|key_facts
+- PROJECT:name|status(active/paused/done)|goal|blockers|next
+- TASK:desc|project|context(@computer/@phone/@errand)|energy(hi/med/lo)|due|est
+- EVENT:title|datetime|type|prep_status
+- PATTERN:observation|confidence(0-1)|evidence_count
+- WAITING:desc|person|due|status(pending/overdue/received)
+- BLOCKER:desc|project|severity(hard/soft)|since
+- COMMITMENT:desc|to_person|due|status
+- Dates: Mon/Tue (this week), Jan15 (this month), 2026-03 (distant)
+- Status: ✓done ⚠pending ✗overdue ◌upcoming →delegated

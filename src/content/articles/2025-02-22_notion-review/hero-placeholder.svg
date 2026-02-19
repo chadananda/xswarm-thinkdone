@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="600" viewBox="0 0 1400 600">
+  <rect fill="#f4efe6" width="1400" height="600"/>
+  <!-- Notion page mockup -->
+  <rect fill="#fffdf8" x="300" y="80" width="800" height="440" rx="8" stroke="#c4b5a0" stroke-width="1"/>
+  <!-- Title area -->
+  <text x="330" y="130" font-family="sans-serif" font-size="28" fill="#3a3226">📚 Product Roadmap</text>
+  <!-- Breadcrumb -->
+  <text x="330" y="165" font-family="sans-serif" font-size="12" fill="#7a6a5a">Workspace → Projects → Roadmap</text>
+  <!-- Building blocks concept -->
+  <!-- Block 1: Text -->
+  <rect fill="#f8f6f4" x="330" y="190" width="740" height="50" rx="4"/>
+  <text x="350" y="215" font-family="sans-serif" font-size="14" fill="#3a3226">We're building the future of productivity tools...</text>
+  <!-- Block 2: H2 Header -->
+  <rect fill="#f8f6f4" x="330" y="255" width="740" height="40" rx="4"/>
+  <text x="350" y="282" font-family="sans-serif" font-size="18" fill="#3a3226" font-weight="bold">Q1 Milestones</text>
+  <!-- Block 3: Checklist -->
+  <rect fill="#f8f6f4" x="330" y="310" width="740" height="90" rx="4"/>
+  <circle cx="355" cy="335" r="8" fill="#2d4a2e"/>
+  <path d="M 351 335 L 354 338 L 359 332" fill="none" stroke="#f4efe6" stroke-width="2"/>
+  <text x="375" y="340" font-family="sans-serif" font-size="13" fill="#7a6a5a">Launch beta version</text>
+  <circle cx="355" cy="365" r="8" fill="none" stroke="#c4b5a0" stroke-width="2"/>
+  <text x="375" y="370" font-family="sans-serif" font-size="13" fill="#3a3226">Gather user feedback</text>
+  <circle cx="355" cy="390" r="8" fill="none" stroke="#c4b5a0" stroke-width="2"/>
+  <text x="375" y="395" font-family="sans-serif" font-size="13" fill="#3a3226">Refine feature set</text>
+  <!-- Block 4: Database/Table -->
+  <rect fill="#f8f6f4" x="330" y="415" width="740" height="85" rx="4"/>
+  <text x="350" y="438" font-family="sans-serif" font-size="11" fill="#7a6a5a" opacity="0.8">FEATURE</text>
+  <text x="550" y="438" font-family="sans-serif" font-size="11" fill="#7a6a5a" opacity="0.8">STATUS</text>
+  <text x="700" y="438" font-family="sans-serif" font-size="11" fill="#7a6a5a" opacity="0.8">OWNER</text>
+  <line x1="330" y1="445" x2="1070" y2="445" stroke="#d5cec3" stroke-width="1"/>
+  <text x="350" y="468" font-family="sans-serif" font-size="13" fill="#3a3226">AI Integration</text>
+  <rect fill="#c69c3f" opacity="0.3" x="550" y="455" width="80" height="22" rx="11"/>
+  <text x="590" y="470" font-family="sans-serif" font-size="11" fill="#3a3226" text-anchor="middle">In Progress</text>
+  <circle cx="710" cy="465" r="12" fill="#7a6a5a"/>
+  <text x="350" y="490" font-family="sans-serif" font-size="13" fill="#3a3226">Mobile App</text>
+  <rect fill="#2d4a2e" opacity="0.3" x="550" y="477" width="60" height="22" rx="11"/>
+  <text x="580" y="492" font-family="sans-serif" font-size="11" fill="#3a3226" text-anchor="middle">Planned</text>
+  <circle cx="710" cy="487" r="12" fill="#c69c3f"/>
+  <!-- Lego blocks decoration on right -->
+  <rect fill="#2d4a2e" opacity="0.4" x="1150" y="150" width="80" height="60" rx="6"/>
+  <circle cx="1170" cy="165" r="6" fill="#f4efe6"/>
+  <circle cx="1210" cy="165" r="6" fill="#f4efe6"/>
+  <rect fill="#c69c3f" opacity="0.4" x="1150" y="230" width="80" height="60" rx="6"/>
+  <circle cx="1170" cy="245" r="6" fill="#f4efe6"/>
+  <circle cx="1210" cy="245" r="6" fill="#f4efe6"/>
+  <rect fill="#7a6a5a" opacity="0.4" x="1150" y="310" width="80" height="60" rx="6"/>
+  <circle cx="1170" cy="325" r="6" fill="#f4efe6"/>
+  <circle cx="1210" cy="325" r="6" fill="#f4efe6"/>
+  <!-- Add button -->
+  <circle cx="350" cy="180" r="3" fill="#7a6a5a" opacity="0.3"/>
+  <circle cx="350" cy="180" r="1" fill="#7a6a5a"/>
+</svg>

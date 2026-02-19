@@ -10,17 +10,16 @@
   import VoiceOrb from './meeting/VoiceOrb.svelte';
 
   // Engine imports
-  import { getDb, ensureSchema, getTasks, toggleTask as dbToggleTask, seedPersonality, clearDatabase, storeUsage, getSetting, getConnection, updateAccessToken } from '../lib/db.js';
+  import { getDb, ensureSchema, getTasks, toggleTask as dbToggleTask, deleteTask as dbDeleteTask, seedPersonality, clearDatabase, getSetting, getActiveSession } from '../lib/db.js';
   import { createSession, initializeSession, processUserMessage, deliverOpeningTurn, transitionState, assembleS2sSystemPrompt } from '../lib/conversation.js';
-  import { calculateCost } from '../lib/usage.js';
   import { generateMorningAgenda, generateOnboardingAgenda, applyAgendaUpdates, createAgendaItem } from '../lib/agenda.js';
   import { getRoutinesForMeeting, getHabitAnalytics } from '../lib/routines-engine.js';
   import { getStreak } from '../lib/routines.js';
   import { getProjects } from '../lib/gtd-engine.js';
-  import { processExtractions, extractFromTranscript, processOnboardingExtractions, persistConversation, persistOnboardingSummary, carryOverDeferred, snapshotConversation, ensureExtractions } from '../lib/extraction.js';
+  import { processExtractions, extractFromTranscript, processOnboardingExtractions, persistConversation, persistOnboardingSummary, carryOverDeferred, snapshotConversation, ensureExtractions, persistResolutions } from '../lib/extraction.js';
   import { detectDataGaps, filterNewGaps, HEARTBEAT_INTERVALS } from '../lib/heartbeat.js';
-  import { buildProviderChain, PROVIDER_ORDER, SESSION_TIER_MAP, getAllProviders, PROVIDERS } from '../lib/providers.js';
-  import { ensureFreshToken } from '../lib/provider.js';
+  import { SESSION_TIER_MAP } from '../lib/providers.js';
+  import { createProviderManager } from '../lib/provider-manager.js';
   import { createSpeechService, resolveMode, resolveTtsProvider, canDirectConnect, SPEECH_PROVIDER_CONNECTION_MAP } from '../lib/speech-service.js';
   import { playApplause, playClick } from '../lib/sounds.js';
 
@@ -51,36 +50,37 @@
   let projects = [];
   let scorecard = [];
   let streaming = false;
-  let providerChain = [];
+  let streamingTimer = null;
+  let pm = null;
   let speechService = null;
 
   // S2S state
   let s2sMode = false;
-  let s2sApiKey = null;
-  let s2sIsOAuth = false;
   let liveAiTranscript = '';
   let liveUserTranscript = '';
+
+  // Safety valve: reset streaming after 90s to prevent stuck UI
+  function setStreaming(value) {
+    streaming = value;
+    clearTimeout(streamingTimer);
+    if (value) {
+      streamingTimer = setTimeout(() => {
+        if (streaming) {
+          console.error('[Dashboard] Streaming timeout after 90s — forcing reset');
+          streaming = false;
+          messages = [...messages, { role: 'ai', text: 'Response timed out. Please try again.' }];
+          notifyStatusBar();
+        }
+      }, 90_000);
+    }
+  }
 
   function notifyStatusBar() {
     if (typeof window !== 'undefined') window.dispatchEvent(new Event('statusbar-refresh'));
   }
 
   function extractionOpts() {
-    // Find ANY credentials for Gemini Flash extraction fallback.
-    // Scan entire provider chain, then fall back to S2S credentials.
-    let apiKey, accessToken;
-    for (const entry of providerChain) {
-      const c = entry.connection;
-      if (!c?.access_token) continue;
-      if (c.refresh_token) { accessToken = c.access_token; }
-      else { apiKey = c.access_token; }
-      break;
-    }
-    if (!apiKey && !accessToken && s2sApiKey) {
-      if (s2sIsOAuth) accessToken = s2sApiKey;
-      else apiKey = s2sApiKey;
-    }
-    return { apiKey, accessToken, agenda: session?.agenda, meetingType: session?.type };
+    return pm ? pm.extractionOpts({ agenda: session?.agenda, meetingType: session?.type }) : {};
   }
 
   function toDisplayMessages(sessionMessages) {
@@ -91,23 +91,7 @@
   }
 
   async function trackUsage(result) {
-    if (!result.usage || !db) return;
-    const u = result.usage;
-    const cost = calculateCost(u.model, u.input_tokens, u.output_tokens, {
-      cacheReadTokens: u.cache_read_input_tokens || 0,
-      cacheWriteTokens: u.cache_creation_input_tokens || 0,
-    });
-    await storeUsage(db, {
-      sessionType: session.type,
-      model: u.model,
-      inputTokens: u.input_tokens,
-      outputTokens: u.output_tokens,
-      costUsd: cost,
-      provider: result.usedProvider?.providerId || 'thinkdone',
-      cacheReadTokens: u.cache_read_input_tokens || 0,
-      cacheWriteTokens: u.cache_creation_input_tokens || 0,
-    });
-    notifyStatusBar();
+    if (pm) await pm.trackUsage(result, session?.type);
   }
 
   // Build a transcript of recent messages for extraction context.
@@ -120,55 +104,13 @@
     }).join('\n\n');
   }
 
-  function notifyProvider() {
-    if (typeof window === 'undefined' || !providerChain.length) return;
-    const primary = providerChain[0];
-    const catalog = PROVIDERS[primary.providerId];
-    window.dispatchEvent(new CustomEvent('provider-update', {
-      detail: {
-        id: primary.providerId,
-        name: catalog?.name || primary.providerId,
-        icon: catalog?.icon || '',
-        model: primary.model,
-      },
-    }));
-  }
-
-  // --- Session Persistence (survives HMR + page reloads) ---
-  const SESSION_KEY = 'thinkdone_active_session';
+  // --- Session Persistence (DB-backed) ---
 
   function saveSession() {
-    if (typeof sessionStorage === 'undefined' || !session) return;
-    try {
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify({
-        session: {
-          id: session.id,
-          type: session.type,
-          state: session.state,
-          agenda: session.agenda,
-          messages: session.messages,
-          summary: session.summary,
-          startedAt: session.startedAt,
-          endedAt: session.endedAt,
-        },
-        meetingStarted,
-      }));
-    } catch {}
-  }
-
-  function restoreSession() {
-    if (typeof sessionStorage === 'undefined') return null;
-    try {
-      const raw = sessionStorage.getItem(SESSION_KEY);
-      if (!raw) return null;
-      const data = JSON.parse(raw);
-      if (!data?.session?.id) return null;
-      return data;
-    } catch { return null; }
-  }
-
-  function clearSavedSession() {
-    if (typeof sessionStorage !== 'undefined') sessionStorage.removeItem(SESSION_KEY);
+    if (!session || !db) return;
+    snapshotConversation(db, session).catch(err =>
+      console.error('[Dashboard] saveSession failed:', err)
+    );
   }
 
   async function handleTaskToggle(task) {
@@ -179,6 +121,17 @@
     notifyStatusBar();
   }
 
+  async function handleTaskDelete(task) {
+    await dbDeleteTask(db, task.id);
+    tasks = await getTasks(db, new Date().toISOString().slice(0, 10));
+    // Add a system note to the conversation so the AI knows
+    if (session) {
+      session.messages.push({ role: 'user', content: `[Removed task: "${task.text}"]` });
+      messages = toDisplayMessages(session.messages.filter(m => m.content?.trim()));
+    }
+    notifyStatusBar();
+  }
+
   // --- Initialize ---
   async function initDb() {
     db = await getDb();
@@ -186,35 +139,51 @@
     await seedPersonality(db);
     if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('reset')) {
       await clearDatabase(db);
-      clearSavedSession();
       window.history.replaceState({}, '', window.location.pathname);
     }
   }
 
   async function initProviders() {
-    const enabledJson = await getSetting(db, 'ai_providers_enabled');
-    const enabledIds = enabledJson ? JSON.parse(enabledJson) : ['thinkdone'];
-    const customJson = await getSetting(db, 'custom_providers');
-    const allProviders = getAllProviders(customJson);
-    const connections = [];
-    for (const id of Object.keys(allProviders)) {
-      const conn = await getConnection(db, id);
-      if (conn) {
-        connections.push(conn);
-        if (!enabledIds.includes(id)) enabledIds.push(id);
-      }
-    }
-    return { enabledIds, connections, allProviders };
+    pm = await createProviderManager(db);
+    await pm.init();
   }
 
-  async function initSession(enabledIds, connections, allProviders) {
-    const saved = restoreSession();
-    if (saved?.session) {
-      session = saved.session;
-      meetingStarted = saved.meetingStarted || false;
+  async function needsOnboarding() {
+    // User has completed onboarding if personality has their name
+    const row = await db.prepare('SELECT disposition FROM personality WHERE id = 1').get();
+    if (row?.disposition) {
+      try {
+        const disp = JSON.parse(row.disposition);
+        if (disp.user_name) return false;
+      } catch {}
+    }
+    return true;
+  }
+
+  async function initSession() {
+    // Try to restore active session from DB
+    const active = await getActiveSession(db);
+    if (active?.messages && active.messages !== '[]') {
+      const onboarding = await needsOnboarding();
+      if (active.session_type === 'onboarding' && !onboarding) {
+        // Stale onboarding — end it and start fresh morning meeting
+        await db.prepare('UPDATE conversations SET ended_at = ? WHERE id = ?')
+          .run(new Date().toISOString(), active.id);
+        session = createSession('morning_meeting');
+        await initializeSession(session, db, generateMorningAgenda);
+      } else {
+        // Restore active session
+        session = createSession(active.session_type);
+        session.messages = JSON.parse(active.messages || '[]');
+        session.agenda = JSON.parse(active.agenda || '[]');
+        session.state = active.state || 'OPENING';
+        session.startedAt = active.started_at;
+        session._convId = active.id;
+        meetingStarted = session.messages.length > 0;
+      }
     } else {
-      const { cnt } = await db.prepare('SELECT COUNT(*) as cnt FROM conversations').get();
-      if (cnt === 0) {
+      // No active session — create new one
+      if (await needsOnboarding()) {
         session = createSession('onboarding');
         await initializeSession(session, db, () => generateOnboardingAgenda());
       } else {
@@ -223,9 +192,8 @@
       }
     }
     const tier = SESSION_TIER_MAP[session.type] || 'standard';
-    providerChain = buildProviderChain(enabledIds, connections, tier, allProviders);
-    console.log(`[Dashboard] init: session=${session.type} tier=${tier} providers=${providerChain.map(p => p.providerId + ':' + p.model).join(', ')}`);
-    notifyProvider();
+    const p = pm.primary;
+    console.log(`[Dashboard] init: session=${session.type} tier=${tier} provider=${p?.id}:${p?.model}`);
     const today = new Date().toISOString().slice(0, 10);
     tasks = await getTasks(db, today);
     syncAgenda();
@@ -245,16 +213,10 @@
       if (mode !== 'browser') {
         const ttsP = resolveTtsProvider(profileId);
         const connKey = SPEECH_PROVIDER_CONNECTION_MAP[ttsP] || ttsP;
-        const conn = await getConnection(db, connKey);
-        apiKey = conn?.access_token || null;
-        isOAuth = !!(conn?.refresh_token);
-        if (isOAuth && conn) {
-          try {
-            apiKey = await ensureFreshToken(conn);
-            if (conn._refreshed) await updateAccessToken(db, connKey, conn.access_token, conn.expires_at);
-          } catch (e) {
-            console.error('[Dashboard] token refresh failed:', e);
-          }
+        const creds = await pm.getSpeechCredentials(connKey);
+        if (creds) {
+          apiKey = creds.apiKey;
+          isOAuth = creds.isOAuth;
         }
         console.log(`[Dashboard] speech: ttsProvider=${ttsP} connKey=${connKey} hasApiKey=${!!apiKey} isOAuth=${isOAuth}`);
       }
@@ -267,8 +229,6 @@
           systemPrompt: flat,
         });
         s2sMode = true;
-        s2sApiKey = apiKey;
-        s2sIsOAuth = isOAuth;
         console.log('[Dashboard] S2S mode enabled');
       } else if (apiKey && canDirectConnect(profileId)) {
         console.log('[Dashboard] → browser-direct speech path');
@@ -294,8 +254,8 @@
   async function init() {
     try {
       await initDb();
-      const { enabledIds, connections, allProviders } = await initProviders();
-      await initSession(enabledIds, connections, allProviders);
+      await initProviders();
+      await initSession();
       await initSpeechService();
       loading = false;
       startHeartbeat();
@@ -402,7 +362,7 @@
 
   // --- Start Meeting (from lobby) ---
   async function startMeeting() {
-    console.log('[Dashboard] startMeeting: s2sMode=%s providers=%d', s2sMode, providerChain.length);
+    console.log('[Dashboard] startMeeting: s2sMode=%s provider=%s', s2sMode, pm?.primary?.id);
     meetingStarted = true;
     saveSession();
     if (s2sMode) {
@@ -421,7 +381,7 @@
       }
     }
     // Text mode: AI delivers opening turn
-    streaming = true;
+    setStreaming(true);
     messages = []; // Clear ghost messages, typing indicator shows instead
     let streamedText = '';
     try {
@@ -432,7 +392,7 @@
         if (display) {
           messages = [{ role: 'ai', text: display }];
         }
-      }, { chain: providerChain });
+      }, { callAI: (opts) => pm.callAI({ ...opts, tier: SESSION_TIER_MAP[session.type] || 'standard' }) });
       console.log('[Dashboard] deliverOpeningTurn complete, displayText=%d chars', result.displayText?.length || 0);
 
       // Ensure extractions — inline XML or fallback
@@ -441,6 +401,7 @@
         await processExtractions(db, ensuredOpen.extractions);
       }
       applyAgendaUpdates(session.agenda, ensuredOpen.agendaUpdates);
+      await persistResolutions(db, session.agenda, ensuredOpen.agendaUpdates, session.type);
       await trackUsage(result);
 
       // Refresh tasks (extractions may have added new ones)
@@ -454,7 +415,7 @@
       console.error('[Dashboard] startMeeting error:', err);
       messages = [{ role: 'ai', text: `Failed to start meeting: ${err.message}. Check the browser console for details.` }];
     } finally {
-      streaming = false;
+      setStreaming(false);
       notifyStatusBar();
     }
   }
@@ -497,12 +458,16 @@
     messages = [{ role: 'ai', text: 'Connecting...' }];
     const openingText = buildOpeningText();
     console.log(`[Dashboard] S2S sending opening: "${openingText.slice(0, 80)}..."`);
-    const result = await speechService.speak(openingText);
-
-    // speak() resolved — push opening transcript (onAiAudio doesn't fire for speak() calls)
-    const transcript = result?.transcript?.trim();
-    if (transcript) {
-      session.messages.push({ role: 'assistant', content: transcript });
+    try {
+      const result = await speechService.speak(openingText);
+      // speak() resolved — push opening transcript (onAiAudio doesn't fire for speak() calls)
+      const transcript = result?.transcript?.trim();
+      if (transcript) {
+        session.messages.push({ role: 'assistant', content: transcript });
+      }
+    } catch (err) {
+      console.error('[Dashboard] S2S opening speak failed:', err);
+      messages = [{ role: 'ai', text: `Voice greeting failed: ${err.message}. You can still type messages.` }];
     }
     messages = session.messages.length ? toDisplayMessages(session.messages) : [];
     saveSession();
@@ -539,6 +504,7 @@
 
       // Apply agenda updates
       applyAgendaUpdates(session.agenda, result.agendaUpdates);
+      await persistResolutions(db, session.agenda, result.agendaUpdates, session.type);
       if (result.agendaUpdates?.adds?.length && session.state === 'OPEN_FLOOR') {
         transitionState(session, 'new_items');
       }
@@ -602,11 +568,11 @@
 
     // Show user message immediately
     messages = [...messages, { role: 'user', text }];
-    streaming = true;
+    setStreaming(true);
     let streamedText = '';
 
     try {
-      console.log(`[Dashboard] sending message: "${text.slice(0, 60)}..." chain=${providerChain.length} providers`);
+      console.log(`[Dashboard] sending message: "${text.slice(0, 60)}..." provider=${pm?.primary?.id}`);
       const result = await processUserMessage(session, text, db, (chunk) => {
         streamedText += chunk;
         const current = toDisplayMessages(session.messages);
@@ -614,15 +580,8 @@
         if (display) current.push({ role: 'ai', text: display });
         messages = current;
       }, {
-        chain: providerChain,
+        callAI: (opts) => pm.callAI({ ...opts, tier: SESSION_TIER_MAP[session.type] || 'standard' }),
       });
-
-      // Persist refreshed token if needed
-      const usedConn = result.usedProvider?.connection;
-      if (usedConn?._refreshed) {
-        await updateAccessToken(db, usedConn.provider, usedConn.access_token, usedConn.expires_at);
-        usedConn._refreshed = false;
-      }
 
       // Ensure extractions — inline XML or fallback post-hoc extraction
       // Include recent conversation so extraction model has planning context
@@ -641,8 +600,9 @@
         }
       }
 
-      // Apply agenda updates
+      // Apply agenda updates and persist answers as memories
       applyAgendaUpdates(session.agenda, ensured.agendaUpdates);
+      await persistResolutions(db, session.agenda, ensured.agendaUpdates, session.type);
       if (ensured.agendaUpdates?.adds?.length && session.state === 'OPEN_FLOOR') {
         transitionState(session, 'new_items');
       }
@@ -666,7 +626,7 @@
       // Show error as AI message so user knows what happened
       messages = [...messages, { role: 'ai', text: `Something went wrong: ${err.message}. Check the browser console for details.` }];
     } finally {
-      streaming = false;
+      setStreaming(false);
       notifyStatusBar();
     }
   }
@@ -676,7 +636,6 @@
     if (!session || !db) return;
     session.endedAt = new Date().toISOString();
     await persistOnboardingSummary(db, session);
-    clearSavedSession();
 
     // Create new morning meeting session
     session = createSession('morning_meeting');
@@ -699,7 +658,6 @@
       await persistConversation(db, session);
       await carryOverDeferred(db, session);
     }
-    clearSavedSession();
   }
 
   // --- Stop Meeting (user-initiated) ---
@@ -720,7 +678,7 @@
     stopHeartbeat();
     await closeMeeting();
     meetingStarted = false;
-    streaming = false;
+    setStreaming(false);
     notifyStatusBar();
   }
 
@@ -779,8 +737,8 @@
   });
 
   onDestroy(() => {
+    clearTimeout(streamingTimer);
     stopHeartbeat();
-    saveSession(); // Persist state for HMR / reload recovery
     speechService?.destroy(); // calls stopVoice internally
   });
 </script>
@@ -798,7 +756,7 @@
 <!-- 3-Column Layout -->
 <main class="main-content" aria-label="Meeting dashboard">
   <div class="column left-column" class:mobile-visible={activeTab === 'tasks'} id="panel-tasks" role="tabpanel" aria-labelledby="tab-tasks">
-    <MeetingTaskList {tasks} onToggle={handleTaskToggle} />
+    <MeetingTaskList {tasks} onToggle={handleTaskToggle} onDelete={handleTaskDelete} />
   </div>
 
   <div class="column center-column" class:mobile-visible={activeTab === 'chat'} id="panel-chat" role="tabpanel" aria-labelledby="tab-chat">

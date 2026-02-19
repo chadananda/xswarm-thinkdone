@@ -1,0 +1,76 @@
+name: "David Park"
+role: "Methodology Columnist"
+bio: "Psychology PhD turned productivity writer. Studies why we procrastinate, how habits form, and what actually works when the motivation fades."
+longBio: |
+  David earned his PhD in behavioral psychology from Stanford, where his dissertation examined the gap between intention and action — why people consistently fail to do things they genuinely want to do. After five years in academia, he grew frustrated watching the research community produce rigorous, useful findings that never reached the people who needed them. Meanwhile, the productivity advice going viral online was mostly recycled platitudes dressed up with neuroscience buzzwords.
+
+  So he left. He started writing about productivity for real people — not the hypothetical rational actors in psychology papers, and not the hustle-culture robots in LinkedIn posts. His work sits in the uncomfortable middle: honest about how hard behavior change actually is, but practical enough to try on Monday morning. He's particularly interested in what happens after the initial motivation fades, because that's where every system either proves itself or collapses.
+
+  David has zero patience for productivity advice that ignores human psychology. If a method requires you to be perfectly disciplined to work, it's not a method — it's a fantasy. He writes about what survives contact with real life: bad days, low energy, competing priorities, and the thousand small negotiations we make with ourselves every day.
+avatar: "authors/david-park-v2.jpg"
+expertise:
+  - "Behavioral Psychology"
+  - "Habit Formation"
+  - "Procrastination"
+  - "Deep Work"
+personality: "Thoughtful, empathetic, occasionally wry. Writes about productivity without the hustle-culture nonsense."
+social:
+  twitter: "@davidpark_think"
+  linkedin: "david-park-phd"
+featured: true
+sales:
+  tagline: "The gap between what you plan and what you do isn't a character flaw. It's psychology."
+  accentColor: "#6a5acd"
+  heroQuote: "If your productivity system requires perfect discipline to work, it's not a system — it's a fantasy. I study what actually survives contact with real life."
+  problem:
+    headline: "You don't have a productivity problem. You have a behavior problem."
+    description: "Every system works on Day 1 when motivation is high. The question is what happens on Day 47 when you're tired, distracted, and your brain is negotiating with itself about whether to even open the app."
+    painPoints:
+      - icon: "🧠"
+        text: "You know exactly what you should do — and you still don't do it"
+      - icon: "📉"
+        text: "New systems work for 2-3 weeks, then quietly collapse"
+      - icon: "😓"
+        text: "You blame yourself instead of the system that was designed to fail"
+      - icon: "🔁"
+        text: "The cycle of enthusiasm → guilt → starting over is exhausting"
+  philosophy:
+    headline: "Design for the human you actually are."
+    description: "David's PhD research examined the gap between intention and action. His productivity writing applies that science — not to make you more disciplined, but to make discipline unnecessary."
+    principles:
+      - title: "Lower the activation energy"
+        description: "The best systems make starting effortless. If opening your task app feels like work, you've already lost. The action should be easier than the avoidance."
+      - title: "Plan for failure states"
+        description: "Bad days aren't bugs — they're features of being human. A real productivity system has a 'low energy mode' that keeps you moving forward even when everything is hard."
+      - title: "Reward the process, not the outcome"
+        description: "Your brain doesn't care about quarterly goals. It cares about the dopamine hit of checking a box. Design around that, and consistency follows naturally."
+  insights:
+    - title: "The Motivation Cliff"
+      description: "Why every system collapses around Day 21 — and the one psychological trick that extends the honeymoon phase indefinitely."
+      icon: "📉"
+    - title: "Decision Fatigue Is Real"
+      description: "By 2 PM, your brain has made 35,000 decisions. No wonder you can't prioritize. The solution isn't willpower — it's making fewer decisions."
+      icon: "🧠"
+    - title: "The Guilt Trap"
+      description: "How the shame of falling behind makes you avoid your task list entirely — creating a vicious cycle that no amount of motivation can break."
+      icon: "😔"
+    - title: "Habit Stacking for Productivity"
+      description: "The behavioral science technique that turns your morning planning session from a chore into an automatic ritual."
+      icon: "🔗"
+  thinkdonePitch:
+    headline: "ThinkDone is the first productivity tool I've seen that's designed around actual human psychology."
+    description: "Most apps assume you'll show up motivated and organized every day. ThinkDone assumes you won't — and builds the system around that reality. The AI does the hard cognitive work. You just have a conversation."
+    points:
+      - "Morning planning conversation eliminates the activation energy barrier — you don't organize, you talk"
+      - "One ordered list means zero prioritization decisions throughout the day"
+      - "Checking tasks off delivers immediate reward — the dopamine loop that keeps you coming back"
+      - "Memory system catches patterns of avoidance before they become habits"
+  faq:
+    - q: "I've tried everything. Why would ThinkDone be different?"
+      a: "Every system you've tried asked you to be the engine. You had to organize, prioritize, review, and maintain. ThinkDone moves all that cognitive work to an AI. Your only job is to show up for a 15-minute conversation and then work a list. It's designed for humans who are tired of productivity systems, not excited by them."
+    - q: "Isn't AI planning just another gimmick?"
+      a: "I was skeptical too — I've seen a decade of 'revolutionary' productivity tools come and go. But ThinkDone solves the specific problem I've studied for years: the cognitive overhead of planning. When the AI handles prioritization, memory, and project tracking, your brain is free to do what it's actually good at — the work itself."
+    - q: "What if I have ADHD or executive function challenges?"
+      a: "ThinkDone is especially powerful for neurodivergent users. It externalizes the executive functions that ADHD makes difficult — prioritization, working memory, task switching. You don't need to hold your whole day in your head. The AI does that, and hands you one thing to focus on at a time."
+    - q: "Can a 15-minute meeting really replace my whole planning system?"
+      a: "That's the behavioral insight — a daily touch point is more effective than elaborate weekly or monthly reviews. Short, consistent sessions build the habit loop. And because the AI remembers everything from previous sessions, those 15 minutes are incredibly dense with strategic value."

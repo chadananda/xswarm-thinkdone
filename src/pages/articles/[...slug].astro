@@ -1,0 +1,98 @@
+---
+import { getCollection, getEntry, render } from 'astro:content';
+import BlogLayout from '../../layouts/BlogLayout.astro';
+import CtaCard from '../../components/blog/CtaCard.astro';
+import RelatedArticles from '../../components/blog/RelatedArticles.astro';
+import ShareMeta from '../../components/blog/ShareMeta.astro';
+//
+export async function getStaticPaths() {
+  const articles = await getCollection('articles', ({ data }) => !data.draft);
+  return articles.map(entry => ({ params: { slug: entry.id }, props: { entry } }));
+}
+//
+const { entry } = Astro.props;
+const { Content, headings } = await render(entry);
+const author = await getEntry('authors', entry.data.author);
+const authorData = author ? {
+  name: author.data.name,
+  avatar: author.data.avatar,
+  social: author.data.social,
+} : { name: entry.data.author, avatar: '', social: undefined };
+//
+// Tag-scored related articles
+const allArticles = await getCollection('articles', ({ data }) => !data.draft);
+const entryTags = entry.data.tags || [];
+const scored = allArticles
+  .filter(a => a.id !== entry.id)
+  .map(a => {
+    const sharedTags = entryTags.filter(t => (a.data.tags || []).includes(t));
+    return { article: a, score: sharedTags.length };
+  })
+  .sort((a, b) => b.score - a.score);
+const relatedSlice = scored.slice(0, 3);
+const related = await Promise.all(relatedSlice.map(async ({ article: a }) => {
+  let aAuthor;
+  if (a.data.author === entry.data.author) {
+    aAuthor = authorData;
+  } else {
+    const resolved = await getEntry('authors', a.data.author);
+    aAuthor = resolved ? { name: resolved.data.name, avatar: resolved.data.avatar } : { name: a.data.author, avatar: '' };
+  }
+  return {
+    title: a.data.title,
+    description: a.data.description,
+    type: a.data.type,
+    heroImage: a.data.heroImage,
+    author: aAuthor,
+    publishedAt: a.data.publishedAt.toISOString(),
+    readingTime: a.data.readingTime,
+    slug: a.id,
+  };
+}));
+const similarArticles = scored
+  .slice(0, 4)
+  .map(({ article: a }) => ({
+    title: a.data.title,
+    heroImage: a.data.heroImage,
+    slug: a.id,
+    readingTime: a.data.readingTime,
+  }));
+---
+<BlogLayout
+  title={entry.data.title}
+  description={entry.data.description}
+  author={authorData.name}
+  publishedAt={entry.data.publishedAt}
+  readingTime={entry.data.readingTime}
+  heroImage={entry.data.heroImage}
+  heroCaption={entry.data.heroCaption}
+  heroCredit={entry.data.heroCredit}
+  headings={headings}
+  audio={entry.data.audio}
+  audioDuration={entry.data.audioDuration}
+  translations={entry.data.translations}
+  currentLocale={entry.data.locale}
+  customBio={entry.data.customBio}
+  customBioAuthorName={entry.data.customBio ? authorData.name : undefined}
+  customBioAuthorAvatar={entry.data.customBio ? authorData.avatar : undefined}
+  customBioAuthorSocial={entry.data.customBio ? authorData.social : undefined}
+  authorAvatar={authorData.avatar}
+  faq={entry.data.faq}
+  similarArticles={similarArticles}
+>
+  <ShareMeta
+    title={entry.data.title}
+    description={entry.data.description}
+    image={entry.data.heroImage}
+    url={`/articles/${entry.id}`}
+    type="article"
+    author={authorData.name}
+    publishedAt={entry.data.publishedAt.toISOString()}
+    tags={entry.data.tags}
+  />
+  <Content />
+  <div class="mt-12">
+    <CtaCard />
+  </div>
+  <RelatedArticles articles={related} />
+</BlogLayout>

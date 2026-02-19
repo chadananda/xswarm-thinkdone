@@ -1,0 +1,222 @@
+---
+import { QUOTES } from '../lib/quotes.js';
+import UserMenu from './UserMenu.astro';
+
+const quotesJson = JSON.stringify(QUOTES);
+const path = Astro.url.pathname.replace(/\/$/, '') || '/';
+---
+
+<header class="brand">
+  <div class="brand-grid">
+    <a href="/tasks" class="brand-icon" title="Think → Done">
+      <img src="/favicon.png" width="56" height="56" alt="ThinkDone home" />
+    </a>
+    <div class="brand-main">
+      <h1>Think<span style="opacity:0.35">-</span><span class="text-gold">Done</span></h1>
+      <div class="quote" id="quote"></div>
+    </div>
+    <nav class="brand-nav" aria-label="Main navigation">
+      <a href="/tasks" class:list={["nav-btn", { active: path.startsWith('/tasks') }]} aria-current={path.startsWith('/tasks') ? 'page' : undefined} title="Tasks">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="14" height="14" rx="2" />
+          <path d="M7 10l2 2 4-4" />
+        </svg>
+        <span class="nav-label">Tasks</span>
+      </a>
+      <a href="/meeting" class:list={["nav-btn", { active: path === '/meeting' }]} aria-current={path === '/meeting' ? 'page' : undefined} title="Meeting">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 4h12a1 1 0 011 1v7a1 1 0 01-1 1H8l-3 3v-3H4a1 1 0 01-1-1V5a1 1 0 011-1z" />
+        </svg>
+        <span class="nav-label">Meeting</span>
+      </a>
+      <a href="/settings" class:list={["nav-btn", { active: path === '/settings' }]} aria-current={path === '/settings' ? 'page' : undefined} title="Settings">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="10" cy="10" r="2.5" />
+          <path d="M10 3v1.5M10 15.5V17M17 10h-1.5M4.5 10H3M14.95 5.05l-1.06 1.06M6.11 13.89l-1.06 1.06M14.95 14.95l-1.06-1.06M6.11 6.11L5.05 5.05" />
+        </svg>
+        <span class="nav-label">Settings</span>
+      </a>
+      <a href="/usage" class:list={["nav-btn", { active: path === '/usage' }]} aria-current={path === '/usage' ? 'page' : undefined} title="Usage">
+        <svg class="nav-icon" aria-hidden="true" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="3" height="6" rx="0.5" />
+          <rect x="8.5" y="7" width="3" height="10" rx="0.5" />
+          <rect x="14" y="3" width="3" height="14" rx="0.5" />
+        </svg>
+        <span class="nav-label">Usage</span>
+      </a>
+    </nav>
+    <div class="brand-right">
+      <UserMenu appMode />
+    </div>
+  </div>
+</header>
+
+<script is:inline>
+  // Single-tab enforcement — OPFS WASM DB requires exclusive access
+  window.name = 'thinkdone';
+  (function() {
+    var ch = new BroadcastChannel('thinkdone-tab');
+    ch.postMessage('ping');
+    ch.onmessage = function(e) {
+      if (e.data === 'ping') ch.postMessage('pong');
+      if (e.data === 'pong') {
+        document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:80vh;font-family:var(--font-hand,Caveat,cursive);font-size:1.5rem;color:#8b6914;text-align:center;padding:2rem">' +
+          'ThinkDone is open in another tab.<br>Please use that tab instead.</div>';
+      }
+    };
+  })();
+</script>
+
+<script is:inline define:vars={{ quotesJson }}>
+  const QUOTES = JSON.parse(quotesJson);
+  let qi = Math.floor(Math.random() * QUOTES.length);
+  const quoteEl = document.getElementById('quote');
+  if (quoteEl) {
+    const TYPE_SPEED = 38;
+    const UNTYPE_SPEED = 22;
+    const PAUSE = 8000;
+    let full = '', pos = 0, typing = true;
+
+    function tick() {
+      if (typing) {
+        pos++;
+        quoteEl.textContent = full.slice(0, pos);
+        if (pos < full.length) setTimeout(tick, TYPE_SPEED);
+        else setTimeout(() => { typing = false; tick(); }, PAUSE);
+      } else {
+        pos--;
+        quoteEl.textContent = pos > 0 ? full.slice(0, pos) : '';
+        if (pos > 0) setTimeout(tick, UNTYPE_SPEED);
+        else { qi = (qi + 1) % QUOTES.length; startQuote(); }
+      }
+    }
+
+    function startQuote() {
+      full = QUOTES[qi]; pos = 0; typing = true; tick();
+    }
+
+    startQuote();
+  }
+
+
+</script>
+
+<style>
+  .brand {
+    padding: 0.15rem 1rem 0.1rem;
+    border-bottom: 2px solid var(--color-ink-faint);
+    margin: 0 0 0.15rem;
+    position: sticky;
+    top: 0;
+    background: color-mix(in srgb, var(--color-paper) 97%, transparent);
+    z-index: 10;
+    backdrop-filter: blur(8px);
+    flex-shrink: 0;
+  }
+  .brand-grid {
+    display: flex;
+    gap: 0;
+    align-items: stretch;
+  }
+  .brand-icon {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    flex-shrink: 0;
+    align-self: stretch;
+  }
+  .brand-icon img {
+    width: auto;
+    height: 56px;
+    margin: -4px 0;
+    position: relative;
+    left: -4px;
+    border-radius: 10px;
+    transition: transform 0.2s, filter 0.2s;
+    filter: drop-shadow(0 1px 4px rgba(0,0,0,0.15));
+    animation: icon-breathe 4s ease-in-out infinite;
+  }
+  .brand-icon:hover img {
+    transform: scale(1.08) rotate(-2deg);
+    filter: drop-shadow(0 3px 8px rgba(0,0,0,0.25));
+    animation-play-state: paused;
+  }
+  @keyframes icon-breathe {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-2px) rotate(1deg); }
+  }
+  .brand-main {
+    flex: 1;
+    min-width: 0;
+    padding-top: 2px;
+  }
+  .brand-nav {
+    display: flex;
+    align-items: center;
+    align-self: center;
+    gap: 2px;
+    flex-shrink: 0;
+    margin-right: 6px;
+  }
+  .nav-btn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 8px;
+    border-radius: 6px;
+    text-decoration: none;
+    color: var(--color-ink-light);
+    font-family: var(--font-ui);
+    font-size: 0.7rem;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+    transition: background 0.15s, color 0.15s;
+  }
+  .nav-btn:hover {
+    background: color-mix(in srgb, var(--color-ink) 8%, transparent);
+    color: var(--color-ink);
+  }
+  .nav-btn.active {
+    background: color-mix(in srgb, var(--color-accent) 12%, transparent);
+    color: var(--color-accent);
+  }
+  .nav-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+  }
+  .nav-label {
+    display: none;
+  }
+  @media (min-width: 640px) {
+    .nav-label {
+      display: inline;
+    }
+  }
+  .brand-right {
+    display: flex;
+    align-items: center;
+    align-self: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .brand h1 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: 1.5rem;
+    color: var(--color-ink-light);
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .brand h1 .text-gold { color: var(--color-gold); }
+  .brand .quote {
+    font-family: var(--font-display);
+    font-size: 1.25rem;
+    color: var(--color-ink-light);
+    font-style: italic;
+    margin-top: -0.1rem;
+    min-height: 1.2em;
+    line-height: 1.1;
+  }
+</style>

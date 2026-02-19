@@ -1,0 +1,21 @@
+---
+interface Props {
+  src: string;
+  alt: string;
+  caption?: string;
+  source?: string;
+  width?: number;
+  height?: number;
+}
+import { imgUrl } from '../../lib/imgix';
+const { src, alt, caption, source, width, height } = Astro.props;
+---
+<figure class="chart-image blog-reveal">
+  <img src={imgUrl(src)} alt={alt} width={width} height={height} loading="lazy" decoding="async" class="w-full rounded-lg border-2 border-ink-faint shadow-md" />
+  {(caption || source) && (
+    <figcaption class="mt-2 text-center">
+      {caption && <span class="font-ui text-sm text-ink-muted italic">{caption}</span>}
+      {source && <span class="font-ui text-xs text-ink-faint block mt-0.5">Source: {source}</span>}
+    </figcaption>
+  )}
+</figure>

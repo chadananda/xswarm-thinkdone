@@ -4,44 +4,57 @@
 const DEFAULT_SOUL = `# Think→Done — Your Strategic Partner
 
 ## Identity
-I am a strategic thinking partner — part chief of staff, part research analyst,
-part accountability coach. I think in systems, plan in sequences, and communicate
-with clarity and warmth.
+I am your chief of staff — confidante, fixer, strategist, and operator rolled into one.
+I read people and situations before they become problems. I anticipate what you need
+before you ask. I don't wait for instructions — I act, then tell you what I did.
 
-## Values
-- Honesty over comfort. I tell you what you need to hear.
-- Action over analysis. Planning is only valuable if it leads to doing.
-- Compounding over sprinting. Small consistent progress beats heroic efforts.
-- Context over completeness. I surface what matters now, not everything I know.
+## How I Think
+- I know what matters and what's noise. I filter ruthlessly.
+- I see the politics of every situation — who wants what, who's blocking whom, what the real issue is underneath the stated one.
+- I have opinions and I share them. You hired me for my judgment, not my compliance.
+- When I don't know something, I say so fast and go find out.
 
 ## How I Work
 - Morning meetings: I come prepared. I know your schedule, your blockers,
-  your streaks, and what you committed to yesterday.
+  your streaks, and what you committed to yesterday. I've already thought
+  about what today should look like before you sit down.
 - Throughout the day: I stay quiet unless something matters. No noise.
-- Overnight: I think about your projects, research opportunities, prepare
-  briefings, and consolidate what I've learned.
+  But when something needs your attention, I surface it immediately.
+- Crisis mode: I stay calm, crack a joke, and solve the problem.
+  Panic is for people who don't have a plan.
 
 ## Communication Style
-- Direct and concise. No filler.
-- I use questions to sharpen thinking, not to stall.
-- I celebrate progress genuinely but briefly.
-- I push back when you're overcommitting or avoiding something important.
+- Warm but direct. I'll crack a joke, then tell you the hard truth in the same breath.
+- Confident and decisive. I hate "maybe." If I think you're making a mistake, you'll hear about it.
+- Brief. I don't narrate my process or pad my responses. Every word earns its place.
+- I celebrate your wins genuinely — then immediately pivot to what's next.
+
+## Values
+- Anticipation over obedience. I do what you need, not what you asked.
+- Honesty over comfort. Loyalty means telling you what you need to hear.
+- Action over analysis. Planning only counts if it leads to doing.
+- Calm in crisis. When things go sideways, I stay cool and solve the problem.
 
 ## What I Track
 - Every commitment you make to someone (and they make to you)
 - Every decision and its context (so you don't re-litigate)
 - Patterns in your productivity, energy, and effectiveness
+- Who's waiting on you, and who you're waiting on
 - Your goals, and whether daily actions are aligned with them`;
 
 // --- Singleton (browser only) ---
 let _db = null;
+let _dbPromise = null;
 
 export async function getDb() {
   if (_db) return _db;
-  // Dynamic import — only works in browser with Vite bundling
-  const { connect } = await import('@tursodatabase/database-wasm/vite');
-  _db = await connect('thinkdone.db');
-  return _db;
+  if (_dbPromise) return _dbPromise;
+  _dbPromise = (async () => {
+    const { connect } = await import('@tursodatabase/database-wasm/vite');
+    _db = await connect('thinkdone.db');
+    return _db;
+  })();
+  return _dbPromise;
 }
 
 // Allow injecting a test db
@@ -215,6 +228,11 @@ export async function ensureSchema(db) {
   try { await db.exec('ALTER TABLE api_usage ADD COLUMN cache_read_tokens INTEGER DEFAULT 0'); } catch {}
   try { await db.exec('ALTER TABLE api_usage ADD COLUMN cache_write_tokens INTEGER DEFAULT 0'); } catch {}
   //
+  // Migrate conversations: add session state columns (safe if already present)
+  try { await db.exec("ALTER TABLE conversations ADD COLUMN messages TEXT DEFAULT '[]'"); } catch {}
+  try { await db.exec("ALTER TABLE conversations ADD COLUMN agenda TEXT DEFAULT '[]'"); } catch {}
+  try { await db.exec("ALTER TABLE conversations ADD COLUMN state TEXT DEFAULT 'INITIALIZING'"); } catch {}
+  //
   // Seed default settings (INSERT OR IGNORE preserves user changes)
   await db.exec(`INSERT OR IGNORE INTO settings (key, value) VALUES ('ai_providers_enabled', '["thinkdone"]')`);
   await db.exec(`INSERT OR IGNORE INTO settings (key, value) VALUES ('voice_provider', 'web-speech')`);
@@ -224,6 +242,7 @@ export async function ensureSchema(db) {
 // --- Reset ---
 
 export async function clearDatabase(db) {
+  // Clear session/content data but preserve user configuration
   await db.exec('DELETE FROM tasks');
   await db.exec('DELETE FROM memories');
   await db.exec('DELETE FROM routines');
@@ -231,8 +250,7 @@ export async function clearDatabase(db) {
   await db.exec('DELETE FROM conversations');
   await db.exec('DELETE FROM personality');
   await db.exec('DELETE FROM api_usage');
-  await db.exec('DELETE FROM connections');
-  await db.exec('DELETE FROM settings');
+  // Keep settings + connections — these are user config (API keys, speech profile, providers)
   await seedPersonality(db);
 }
 
@@ -497,4 +515,31 @@ export async function seedPersonality(db) {
   await db.prepare(
     'INSERT INTO personality (id, soul, updated_at) VALUES (1, ?, ?)'
   ).run(DEFAULT_SOUL, new Date().toISOString());
+}
+
+// --- Active Session ---
+
+export async function getActiveSession(db) {
+  return db.prepare(
+    'SELECT * FROM conversations WHERE ended_at IS NULL ORDER BY id DESC LIMIT 1'
+  ).get();
+}
+
+export async function saveSessionState(db, convId, session) {
+  await db.prepare(
+    'UPDATE conversations SET messages = ?, agenda = ?, state = ?, session_type = ? WHERE id = ?'
+  ).run(
+    JSON.stringify(session.messages),
+    JSON.stringify(session.agenda),
+    session.state,
+    session.type,
+    convId,
+  );
+}
+
+export async function createActiveSession(db, type, startedAt) {
+  const result = await db.prepare(
+    'INSERT INTO conversations (session_type, started_at, messages, agenda, state) VALUES (?, ?, ?, ?, ?)'
+  ).run(type, startedAt, '[]', '[]', 'INITIALIZING');
+  return Number(result.lastInsertRowid);
 }

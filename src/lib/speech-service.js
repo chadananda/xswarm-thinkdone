@@ -1,5 +1,5 @@
 // Speech service abstraction — pluggable TTS+STT and S2S providers
-// Pure resolver functions + factory. No browser APIs in this file.
+// Resolver functions + factory. Voice session management (mic, playback, STT) lives here too.
 import { SPEECH_PROFILE_MAP } from './speech.js';
 import {
   BROWSER_DIRECT_TTS, BROWSER_DIRECT_STT, BROWSER_DIRECT_S2S,
@@ -101,7 +101,7 @@ export function createSpeechService(profileId, options = {}) {
   // Browser mode: local-only service, no WS
   if (mode === 'browser' && !options.WebSocket) {
     console.log('[speech-svc] → creating LOCAL service (browser mode, no WS)');
-    return createLocalService(profileId, mode);
+    return createLocalService(profileId, mode, options);
   }
   // Browser-direct mode: API key or access token + direct-capable → no WS needed
   if ((options.apiKey || options.accessToken) && options.direct !== false && canDirectConnect(profileId)) {
@@ -115,17 +115,39 @@ export function createSpeechService(profileId, options = {}) {
   }
   // Default: local stub service (backwards compat)
   console.log('[speech-svc] → creating LOCAL stub service (fallback)');
-  return createLocalService(profileId, mode);
+  return createLocalService(profileId, mode, options);
 }
 
-function createLocalService(profileId, mode) {
+function createLocalService(profileId, mode, options = {}) {
   console.log(`[speech-svc] createLocalService profile=${profileId} mode=${mode}`);
   let ttsSeconds = 0;
   let sttSeconds = 0;
+  let voiceState = null;
+  let userTranscriptCb = null;
+  let aiAudioCb = null;
+  // Injectable browser deps (production defaults → real browser APIs; tests → mocks)
+  const deps = {
+    SpeechRecognition: options.SpeechRecognition || globalThis.SpeechRecognition || globalThis.webkitSpeechRecognition,
+    SpeechSynthesis: options.SpeechSynthesis || globalThis.speechSynthesis,
+    SpeechSynthesisUtterance: options.SpeechSynthesisUtterance || globalThis.SpeechSynthesisUtterance,
+  };
   return {
     profileId,
     mode,
-    async speak(_text) { return { durationMs: 0 }; },
+    async speak(text) {
+      // If voice session active AND SpeechSynthesis available, use it
+      if (voiceState && deps.SpeechSynthesis && deps.SpeechSynthesisUtterance) {
+        await new Promise((resolve) => {
+          const utt = new deps.SpeechSynthesisUtterance(text);
+          utt.rate = 1.05;
+          utt.onend = () => resolve();
+          utt.onerror = () => resolve();
+          deps.SpeechSynthesis.speak(utt);
+        });
+        if (aiAudioCb) aiAudioCb(null, text);
+      }
+      return { durationMs: 0 };
+    },
     stopSpeaking() {},
     listen(_onResult) {},
     stopListening() {},
@@ -133,13 +155,71 @@ function createLocalService(profileId, mode) {
     async converse(_audioBlob) { return { audioBlob: null, transcript: '', durationMs: 0 }; },
     get speaking() { return false; },
     get listening() { return false; },
+    onUserTranscript(cb) { userTranscriptCb = cb; },
+    onMicLevel(_cb) {}, // no-op for local service (no mic pipeline)
+    onAiAudio(cb) { aiAudioCb = cb; },
+    get voiceActive() { return !!voiceState; },
+    async startVoice() {
+      if (voiceState) return; // idempotent
+      // Create SpeechRecognition if available
+      let sttRecog = null;
+      const SR = deps.SpeechRecognition;
+      if (SR) {
+        sttRecog = new SR();
+        sttRecog.continuous = true;
+        sttRecog.interimResults = true;
+        sttRecog.lang = 'en-US';
+        sttRecog.onresult = (event) => {
+          let transcript = '';
+          let hasFinal = false;
+          for (let i = event.resultIndex; i < event.results.length; i++) {
+            transcript += event.results[i][0].transcript;
+            if (event.results[i].isFinal) hasFinal = true;
+          }
+          if (userTranscriptCb) userTranscriptCb(transcript, hasFinal);
+        };
+        sttRecog.onend = () => {
+          if (voiceState?.sttRecog) {
+            try { sttRecog.start(); } catch {}
+          }
+        };
+        sttRecog.start();
+      }
+      voiceState = { sttRecog };
+    },
+    stopVoice() {
+      if (!voiceState) return;
+      if (voiceState.sttRecog) { voiceState.sttRecog.abort(); }
+      voiceState = null;
+    },
     getUsage() {
       return { ttsSeconds, sttSeconds, estimatedCost: estimateCost(profileId, ttsSeconds, sttSeconds) };
     },
     resetUsage() { ttsSeconds = 0; sttSeconds = 0; },
     _addUsage(tts, stt) { ttsSeconds += tts; sttSeconds += stt; },
-    destroy() { this.stopSpeaking(); this.stopListening(); },
+    destroy() {
+      this.stopVoice();
+      this.stopSpeaking();
+      this.stopListening();
+    },
   };
+}
+
+// --- PCM conversion helpers ---
+export function pcm16ToFloat32(pcmData) {
+  const samples = pcmData.length / 2;
+  const float32 = new Float32Array(samples);
+  const view = new DataView(pcmData.buffer, pcmData.byteOffset, pcmData.byteLength);
+  for (let i = 0; i < samples; i++) float32[i] = view.getInt16(i * 2, true) / 32768;
+  return float32;
+}
+
+export function float32ToPcm16(float32) {
+  const pcm = new Int16Array(float32.length);
+  for (let i = 0; i < float32.length; i++) {
+    pcm[i] = Math.max(-32768, Math.min(32767, Math.floor(float32[i] * 32768)));
+  }
+  return pcm;
 }
 
 function createDirectService(profileId, mode, options) {
@@ -154,6 +234,21 @@ function createDirectService(profileId, mode, options) {
   let streamingAudioCb = null;
   let streamingTranscriptCb = null;
   let ttsAbort = null;
+
+  // --- Voice session state ---
+  let voiceState = null;   // { micCtx, processor, micStream, playbackCtx, playhead, sttRecog }
+  let userTranscriptCb = null;
+  let micLevelCb = null;
+  let speakingState = false;
+
+  // Injectable browser deps (production defaults → real browser APIs; tests → mocks)
+  const deps = {
+    getUserMedia: options.getUserMedia || (c => navigator.mediaDevices.getUserMedia(c)),
+    AudioContext: options.AudioContext || globalThis.AudioContext || globalThis.webkitAudioContext,
+    SpeechRecognition: options.SpeechRecognition || globalThis.SpeechRecognition || globalThis.webkitSpeechRecognition,
+    SpeechSynthesis: options.SpeechSynthesis || globalThis.speechSynthesis,
+    SpeechSynthesisUtterance: options.SpeechSynthesisUtterance || globalThis.SpeechSynthesisUtterance,
+  };
 
   const config = {
     apiKey: options.apiKey,
@@ -195,7 +290,12 @@ function createDirectService(profileId, mode, options) {
         // S2S mode: send text to persistent Gemini session, get audio back
         if (mode === 's2s') {
           const session = ensureGeminiSession();
-          await new Promise(resolve => session.onReady(resolve));
+          // Wait for WS setup with timeout — rejects if connection fails or closes early
+          await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('Gemini connection timeout (10s)')), 10000);
+            session.onError((err) => { clearTimeout(timeout); reject(err); });
+            session.onReady(() => { clearTimeout(timeout); resolve(); });
+          });
           const result = await session.sendText(text);
           const elapsed = Date.now() - startTime;
           ttsSeconds += elapsed / 1000;
@@ -205,7 +305,22 @@ function createDirectService(profileId, mode, options) {
         // TTS+STT mode: stream TTS
         ttsAbort = new AbortController();
         const ttsProvider = resolveTtsProvider(profileId);
-        if (ttsProvider === 'browser') return { durationMs: 0, audioChunks: [] };
+        // Browser TTS: if voice active, play via SpeechSynthesis
+        if (ttsProvider === 'browser') {
+          if (voiceState && deps.SpeechSynthesis && deps.SpeechSynthesisUtterance) {
+            speakingState = true;
+            _speaking = false; // not "speaking" in the TTS streaming sense
+            await new Promise((resolve) => {
+              const utt = new deps.SpeechSynthesisUtterance(text);
+              utt.rate = 1.05;
+              utt.onend = () => { speakingState = false; resolve(); };
+              utt.onerror = () => { speakingState = false; resolve(); };
+              deps.SpeechSynthesis.speak(utt);
+            });
+            if (aiAudioCallback) aiAudioCallback(null, text);
+          }
+          return { durationMs: 0, audioChunks: [] };
+        }
         const chunks = [];
         for await (const chunk of browserStreamTts(ttsProvider, text, config, (url, init) => {
           return fetch(url, { ...init, signal: ttsAbort.signal });
@@ -268,12 +383,185 @@ function createDirectService(profileId, mode, options) {
     },
     get speaking() { return _speaking; },
     get listening() { return _listening; },
+    get isSpeaking() { return speakingState; },
+    get voiceActive() { return !!voiceState; },
+    onUserTranscript(cb) { userTranscriptCb = cb; },
+    onMicLevel(cb) { micLevelCb = cb; },
+    async startVoice(overrideDeps) {
+      if (voiceState) return; // already active
+
+      if (mode === 's2s') {
+        // S2S mode: playback + mic pipeline + STT
+        // 1. Create playback AudioContext (24kHz for Gemini output)
+        const playbackCtx = new deps.AudioContext({ sampleRate: 24000 });
+        let playhead = playbackCtx.currentTime;
+
+        // 2. Wire streaming audio → gapless playback + speaking state
+        streamingAudioCb = (pcm) => {
+          if (!speakingState) { speakingState = true; }
+          const float32 = pcm16ToFloat32(pcm);
+          const buffer = playbackCtx.createBuffer(1, float32.length, 24000);
+          buffer.copyToChannel(float32, 0);
+          const source = playbackCtx.createBufferSource();
+          source.buffer = buffer;
+          source.connect(playbackCtx.destination);
+          const startAt = Math.max(playbackCtx.currentTime, playhead);
+          source.start(startAt);
+          playhead = startAt + buffer.duration;
+        };
+
+        // 3. Wire turn complete → schedule unmute after playback drains
+        const origTurnCb = aiAudioCallback;
+        aiAudioCallback = (wav, transcript) => {
+          const remaining = Math.max(0, playhead - (playbackCtx?.currentTime || 0));
+          setTimeout(() => { speakingState = false; }, remaining * 1000);
+          if (origTurnCb) origTurnCb(wav, transcript);
+        };
+
+        // 4. Request mic with echo cancellation (injectable)
+        const micStream = await deps.getUserMedia({
+          audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+        });
+        const micCtx = new deps.AudioContext({ sampleRate: 16000 });
+        if (micCtx.state === 'suspended') await micCtx.resume();
+        const micSource = micCtx.createMediaStreamSource(micStream);
+        const processor = micCtx.createScriptProcessor(4096, 1, 1);
+        const svc = this; // capture for closure
+        processor.onaudioprocess = (e) => {
+          const float32 = e.inputBuffer.getChannelData(0);
+          // Fire mic level regardless of mute state
+          if (micLevelCb) {
+            let sum = 0;
+            for (let i = 0; i < float32.length; i++) sum += float32[i] * float32[i];
+            micLevelCb(Math.min(1, Math.sqrt(sum / float32.length) * 10));
+          }
+          if (speakingState) return; // auto-mute while AI speaks
+          const pcm = float32ToPcm16(float32);
+          svc.sendAudio(new Uint8Array(pcm.buffer));
+        };
+        micSource.connect(processor);
+        processor.connect(micCtx.destination);
+
+        // 5. Start browser SpeechRecognition for user transcript (injectable)
+        let sttRecog = null;
+        if (deps.SpeechRecognition) {
+          sttRecog = new deps.SpeechRecognition();
+          sttRecog.continuous = true;
+          sttRecog.interimResults = true;
+          sttRecog.lang = 'en-US';
+          sttRecog.onresult = (event) => {
+            let transcript = '';
+            let hasFinal = false;
+            for (let i = event.resultIndex; i < event.results.length; i++) {
+              transcript += event.results[i][0].transcript;
+              if (event.results[i].isFinal) hasFinal = true;
+            }
+            if (userTranscriptCb) userTranscriptCb(transcript, hasFinal);
+          };
+          sttRecog.onend = () => {
+            if (voiceState?.sttRecog) {
+              try { sttRecog.start(); } catch {}
+            }
+          };
+          sttRecog.start();
+        }
+
+        voiceState = { micCtx, processor, micStream, playbackCtx, playhead, sttRecog };
+      } else {
+        // TTS+STT mode
+        const sttProvider = resolveSttProvider(profileId);
+        let micCtx = null, processor = null, micStream = null, sttRecog = null;
+
+        if (sttProvider === 'browser') {
+          // Browser STT: just SpeechRecognition, no mic AudioContext needed
+          if (deps.SpeechRecognition) {
+            sttRecog = new deps.SpeechRecognition();
+            sttRecog.continuous = true;
+            sttRecog.interimResults = true;
+            sttRecog.lang = 'en-US';
+            sttRecog.onresult = (event) => {
+              let transcript = '';
+              let hasFinal = false;
+              for (let i = event.resultIndex; i < event.results.length; i++) {
+                transcript += event.results[i][0].transcript;
+                if (event.results[i].isFinal) hasFinal = true;
+              }
+              if (userTranscriptCb) userTranscriptCb(transcript, hasFinal);
+            };
+            sttRecog.onend = () => {
+              if (voiceState?.sttRecog) {
+                try { sttRecog.start(); } catch {}
+              }
+            };
+            sttRecog.start();
+          }
+        } else {
+          // Premium STT: need mic pipeline
+          micStream = await deps.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+          });
+          micCtx = new deps.AudioContext({ sampleRate: 16000 });
+          if (micCtx.state === 'suspended') await micCtx.resume();
+          const micSource = micCtx.createMediaStreamSource(micStream);
+          processor = micCtx.createScriptProcessor(4096, 1, 1);
+          const svc = this;
+          processor.onaudioprocess = (e) => {
+            const float32 = e.inputBuffer.getChannelData(0);
+            // RMS for mic level
+            if (micLevelCb) {
+              let sum = 0;
+              for (let i = 0; i < float32.length; i++) sum += float32[i] * float32[i];
+              micLevelCb(Math.min(1, Math.sqrt(sum / float32.length) * 10));
+            }
+            if (speakingState) return; // auto-mute
+            const pcm = float32ToPcm16(float32);
+            svc.sendAudio(new Uint8Array(pcm.buffer));
+          };
+          micSource.connect(processor);
+          processor.connect(micCtx.destination);
+
+          // Also start browser STT for transcripts if available
+          if (deps.SpeechRecognition) {
+            sttRecog = new deps.SpeechRecognition();
+            sttRecog.continuous = true;
+            sttRecog.interimResults = true;
+            sttRecog.lang = 'en-US';
+            sttRecog.onresult = (event) => {
+              let transcript = '';
+              let hasFinal = false;
+              for (let i = event.resultIndex; i < event.results.length; i++) {
+                transcript += event.results[i][0].transcript;
+                if (event.results[i].isFinal) hasFinal = true;
+              }
+              if (userTranscriptCb) userTranscriptCb(transcript, hasFinal);
+            };
+            sttRecog.onend = () => {
+              if (voiceState?.sttRecog) try { sttRecog.start(); } catch {}
+            };
+            sttRecog.start();
+          }
+        }
+
+        voiceState = { micCtx, processor, micStream, sttRecog };
+      }
+    },
+    stopVoice() {
+      if (!voiceState) return;
+      speakingState = false;
+      voiceState.processor?.disconnect();
+      voiceState.micStream?.getTracks().forEach(t => t.stop());
+      voiceState.micCtx?.close().catch(() => {});
+      voiceState.playbackCtx?.close().catch(() => {});
+      if (voiceState.sttRecog) { voiceState.sttRecog.abort(); }
+      voiceState = null;
+    },
     getUsage() {
       return { ttsSeconds, sttSeconds, estimatedCost: estimateCost(profileId, ttsSeconds, sttSeconds) };
     },
     resetUsage() { ttsSeconds = 0; sttSeconds = 0; },
     _addUsage(tts, stt) { ttsSeconds += tts; sttSeconds += stt; },
     destroy() {
+      this.stopVoice();
       this.stopSpeaking();
       this.stopListening();
       if (geminiSession) { geminiSession.destroy(); geminiSession = null; }

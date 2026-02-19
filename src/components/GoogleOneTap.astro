@@ -1,0 +1,58 @@
+---
+// Google One Tap sign-in — identity only (name, email, picture).
+// Gemini API access still requires the full OAuth flow in Settings.
+const clientId = import.meta.env.GOOGLE_CLIENT_ID || process.env.GOOGLE_CLIENT_ID || '';
+---
+
+{clientId && (
+  <script is:inline define:vars={{ clientId }}>
+  (function() {
+    // Skip if already signed in
+    if (localStorage.getItem('td_profile')) return;
+
+    function handleCredentialResponse(response) {
+      if (!response.credential) return;
+      try {
+        var payload = response.credential.split('.')[1];
+        var decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
+        var info = JSON.parse(decoded);
+        var profile = {
+          name: info.name || '',
+          email: info.email || '',
+          picture: info.picture || '',
+        };
+        localStorage.setItem('td_profile', JSON.stringify(profile));
+        document.cookie = 'td_user=1; path=/; max-age=31536000; SameSite=Lax';
+        window.location.reload();
+      } catch(e) {
+        console.error('[OneTap] credential decode error:', e);
+      }
+    }
+
+    // Expose globally so UserMenu can trigger it
+    window.__googleOneTapPrompt = function() {
+      if (window.google && window.google.accounts) {
+        window.google.accounts.id.prompt();
+      } else {
+        // GIS not loaded yet — fall back to redirect
+        window.location.href = '/api/auth/google';
+      }
+    };
+
+    // Load Google Identity Services library
+    var script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.onload = function() {
+      google.accounts.id.initialize({
+        client_id: clientId,
+        callback: handleCredentialResponse,
+        auto_select: true,
+        use_fedcm_for_prompt: true,
+      });
+      google.accounts.id.prompt();
+    };
+    document.head.appendChild(script);
+  })();
+  </script>
+)}

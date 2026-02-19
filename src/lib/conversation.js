@@ -2,7 +2,24 @@
 // Runs in the browser. Server is only a streaming proxy.
 
 import { buildContext } from './memory-engine.js';
-import { callProvider, callWithFallback } from './provider.js';
+// Legacy imports used only when providerOpts.callAI is not provided (backward compat for tests)
+let _callWithFallback, _callProvider;
+async function loadLegacyProvider() {
+  if (!_callWithFallback) {
+    const mod = await import('./provider.js');
+    _callWithFallback = mod.callWithFallback;
+    _callProvider = mod.callProvider;
+  }
+}
+// Recall module lazy import
+let _recallForTurn, _formatRecalledContext;
+async function loadRecall() {
+  if (!_recallForTurn) {
+    const mod = await import('./recall.js');
+    _recallForTurn = mod.recallForTurn;
+    _formatRecalledContext = mod.formatRecalledContext;
+  }
+}
 
 let _sessionCounter = 0;
 
@@ -118,6 +135,16 @@ export async function assembleSystemPrompt(session, db) {
     blocks.push({ type: 'text', text: '\n## Current Context\n' + context.text, cache_control: { type: 'ephemeral' } });
   }
 
+  // Block 3b — Recalled context (subconscious memory search)
+  try {
+    await loadRecall();
+    const recalled = await _recallForTurn(db, session);
+    const recalledText = _formatRecalledContext(recalled);
+    if (recalledText) {
+      blocks.push({ type: 'text', text: '\n## Recalled Context\n' + recalledText });
+    }
+  } catch {}
+
   // Block 4 — Turn context (volatile, changes every turn — no cache)
   const turnContext = buildTurnContext(session);
   if (turnContext) {
@@ -155,6 +182,9 @@ NEVER ask two questions in the same message. End with exactly ONE question.
 - Surface connections between topics when confidence is high
 - Confirm extractions briefly: "Got it — pricing page to Gilbert by Thursday. Tracked."
 
+## Task Specificity Rule
+Tasks MUST be concrete next actions, not aspirations or broad goals. If the user mentions something vague like "address procrastination" or "improve my workflow," do NOT extract it as a task. Instead, help them narrow it down: "What's one specific thing you could do today toward that?" Only extract the specific action they commit to. Good: "Read chapter 3 of Atomic Habits." Bad: "Address procrastination patterns to ensure timely execution."
+
 ## Extraction Format
 After your conversational response, append a <meeting_state> block (the system strips this before display):
 <meeting_state>
@@ -191,6 +221,7 @@ Efficient, context-aware, responsive. No pre-set agenda.
 - Keep responses short — 1-3 sentences typically
 - Extract tasks/decisions/status updates as they come up
 - End with exactly ONE question if more context is needed
+- Tasks must be specific next actions, not vague goals. Help the user narrow broad intentions into concrete steps before extracting.
 
 ## Duration
 Target: 1-5 minutes, 1-5 turns. Don't pad the conversation.
@@ -277,8 +308,10 @@ After your conversational response, append a <meeting_state> block:
 </meeting_state>
 
 Use <profile> tags for identity data (name, timezone, role, preferences).
-Use standard tags (task, decision, commitment) for projects, people, and action items.
+Use standard tags (task, decision, commitment) ONLY for things the USER needs to do or decided.
 Only emit profile tags when you actually learn new information — don't emit empty ones.
+
+CRITICAL: Do NOT create tasks for YOUR job (learning their name, understanding their workflow, establishing rapport). Those are your responsibilities, not theirs. Only extract tasks the user explicitly mentions needing to do — real actions like "call the dentist" or "finish the proposal." If no user tasks come up during onboarding, extract zero tasks. That's fine.
 
 ## Closing
 When all topics are covered, give a brief summary of what you learned. Use your new name. Express excitement to start working together. Mention their first morning meeting will use everything you just learned.`,
@@ -329,6 +362,14 @@ export async function assembleS2sSystemPrompt(session, db) {
   }
   // Block 2 — Meeting type rules WITHOUT extraction format (key difference)
   blocks.push({ type: 'text', text: stripExtractionFormat(getMeetingRules(session.type)), cache_control: { type: 'ephemeral' } });
+  // Block 2b — Voice brevity (S2S-only)
+  blocks.push({ type: 'text', text: `## Voice Conversation Rules
+This is a VOICE conversation — you are speaking aloud, not writing.
+- Keep every response to 1-3 SHORT sentences maximum
+- Be warm but extremely concise — no lectures, no lists, no monologues
+- Ask ONE question, then STOP and listen
+- Never narrate what you're about to do — just do it
+- Think: quick coffee chat, not a presentation` });
   // Block 3 — Memory context
   const context = await buildContext(db, { maxTokens: 8000 });
   if (context.text) {
@@ -388,26 +429,37 @@ export async function deliverOpeningTurn(session, db, streamCallback, providerOp
   // Assemble prompt
   const systemPrompt = await assembleSystemPrompt(session, db);
 
-  // No user messages — AI speaks first
-  const claudeMessages = session.messages.map(m => ({
-    role: m.role,
-    content: m.content,
-  }));
+  // AI speaks first — Claude requires at least one user message, so add a
+  // trigger if session has no messages yet (fresh meeting / onboarding)
+  const claudeMessages = session.messages.length
+    ? session.messages.map(m => ({ role: m.role, content: m.content }))
+    : [{ role: 'user', content: 'Start the meeting.' }];
 
   let fullResponse = '';
   let usage = null;
   let usedProvider = null;
   try {
     let response;
-    if (providerOpts.chain?.length) {
-      const result = await callWithFallback(providerOpts.chain, {
+    if (providerOpts.callAI) {
+      // New path: ProviderManager
+      const result = await providerOpts.callAI({
+        system: systemPrompt,
+        messages: claudeMessages,
+      });
+      response = result.response;
+      usedProvider = result.provider;
+    } else if (providerOpts.chain?.length) {
+      // Legacy: direct chain (for existing tests)
+      await loadLegacyProvider();
+      const result = await _callWithFallback(providerOpts.chain, {
         system: systemPrompt,
         messages: claudeMessages,
       });
       response = result.response;
       usedProvider = result.provider;
     } else {
-      response = await callProvider(providerOpts.provider || 'claude', {
+      await loadLegacyProvider();
+      response = await _callProvider(providerOpts.provider || 'claude', {
         system: systemPrompt,
         messages: claudeMessages,
         model: providerOpts.model,
@@ -436,6 +488,8 @@ export async function deliverOpeningTurn(session, db, streamCallback, providerOp
               if (streamCallback) streamCallback(parsed.text);
             } else if (parsed.usage) {
               usage = parsed.usage;
+            } else if (parsed.error) {
+              console.error('[conversation] API error:', parsed.error);
             }
           } catch {}
         }
@@ -475,21 +529,32 @@ export async function processUserMessage(session, message, db, streamCallback, p
     content: m.content,
   }));
 
-  // Call AI provider — use fallback chain if available, else legacy single provider
+  // Call AI provider — ProviderManager (callAI), fallback chain, or legacy single provider
   let fullResponse = '';
   let usage = null;
   let usedProvider = null;
   try {
     let response;
-    if (providerOpts.chain?.length) {
-      const result = await callWithFallback(providerOpts.chain, {
+    if (providerOpts.callAI) {
+      // New path: ProviderManager
+      const result = await providerOpts.callAI({
+        system: systemPrompt,
+        messages: claudeMessages,
+      });
+      response = result.response;
+      usedProvider = result.provider;
+    } else if (providerOpts.chain?.length) {
+      // Legacy: direct chain (for existing tests)
+      await loadLegacyProvider();
+      const result = await _callWithFallback(providerOpts.chain, {
         system: systemPrompt,
         messages: claudeMessages,
       });
       response = result.response;
       usedProvider = result.provider;
     } else {
-      response = await callProvider(providerOpts.provider || 'claude', {
+      await loadLegacyProvider();
+      response = await _callProvider(providerOpts.provider || 'claude', {
         system: systemPrompt,
         messages: claudeMessages,
         model: providerOpts.model,
@@ -518,6 +583,8 @@ export async function processUserMessage(session, message, db, streamCallback, p
               if (streamCallback) streamCallback(parsed.text);
             } else if (parsed.usage) {
               usage = parsed.usage;
+            } else if (parsed.error) {
+              console.error('[conversation] API error:', parsed.error);
             }
           } catch {}
         }

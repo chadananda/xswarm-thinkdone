@@ -1,0 +1,18 @@
+---
+interface Props {
+  cite?: string;
+  role?: string;
+}
+const { cite, role } = Astro.props;
+---
+<blockquote class="quote-block quote-block-breakout blog-reveal" data-reveal="left">
+  <span class="quote-mark" aria-hidden="true">"</span>
+  <div class="font-hand text-xl italic leading-relaxed [&>p]:m-0 [&>p:not(:last-child)]:mb-2" style="color:rgba(244,239,230,0.9)">
+    <slot />
+  </div>
+  {cite && (
+    <footer class="mt-4 font-ui text-sm" style="color:rgba(244,239,230,0.5)">
+      — {cite}{role && <span style="color:rgba(244,239,230,0.35)">, {role}</span>}
+    </footer>
+  )}
+</blockquote>

@@ -1,0 +1,809 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getCollection } from 'astro:content';
+import { imgUrl } from '../../lib/imgix';
+import SiteNav from '../../components/SiteNav.astro';
+
+const allAuthors = await getCollection('authors');
+// Featured first, then alphabetical
+const sorted = [...allAuthors].sort((a, b) => {
+  if (a.data.featured && !b.data.featured) return -1;
+  if (!a.data.featured && b.data.featured) return 1;
+  return a.data.name.localeCompare(b.data.name);
+});
+
+// Problems ThinkDone solves — relatable, everyday stuff
+const stats = [
+  { value: '0', label: 'Missed Deadlines', icon: '🎯' },
+  { value: '0', label: 'Forgotten Birthdays', icon: '🎂' },
+  { value: '15m', label: 'Morning Planning', icon: '☕' },
+  { value: '1', label: 'Simple List', icon: '📋' },
+  { value: '100%', label: 'Less Guilt', icon: '😌' },
+];
+---
+<BaseLayout title="The Team Behind Your Morning Meeting — ThinkDone" description="Real people who've been there — forgetting deadlines, juggling too much, wishing for a better way. Meet the writers behind ThinkDone.">
+  <div class="mt-page">
+
+    <!-- ═══ NAVIGATION ═══ -->
+    <SiteNav links={[
+      { href: '/articles', label: 'Articles' },
+      { href: '/#features', label: 'Features' },
+      { href: '/#pricing', label: 'Pricing' },
+    ]} />
+
+    <!-- ═══ HERO ═══ -->
+    <section class="mt-hero">
+      <div class="mt-blob mt-blob-sage" style="width:600px;height:600px;top:5%;left:-15%"></div>
+      <div class="mt-blob mt-blob-gold" style="width:500px;height:500px;bottom:5%;right:-12%;animation-delay:-11s"></div>
+      <div class="mt-hero-glow"></div>
+      <div class="mt-hero-grid"></div>
+      <div class="relative z-10 max-w-5xl mx-auto px-6 text-center">
+        <p class="font-mono text-gold text-xs tracking-widest uppercase mb-6">The Productivity Team</p>
+        <h1 class="font-display font-bold text-paper leading-tight mb-6" style="font-size:clamp(2.8rem,7vw,5.2rem)">
+          Real people. Real chaos.<br>Real solutions.
+        </h1>
+        <p class="font-hand text-paper/60 text-lg md:text-xl max-w-[620px] mx-auto mb-8 leading-relaxed">
+          A teacher drowning in grading. A mom juggling three kids' schedules. A grad student who kept missing deadlines. A manager who forgot his own anniversary. A dev who automated his way out of the mess. They all needed the same thing &mdash; and built it.
+        </p>
+
+        <!-- Floating avatar cluster -->
+        <div class="mt-avatar-cluster">
+          {sorted.map((author, i) => (
+            <a href={`/authors/${author.id}`} class="mt-cluster-avatar" style={`--delay: ${i * 0.12}s; --accent: ${author.data.sales?.accentColor || '#8b4513'}; z-index: ${5 - i}`}>
+              <img src={imgUrl(author.data.avatar, { w: 200, h: 200, fit: 'crop' })} width="200" height="200" alt={author.data.name} loading="eager" />
+            </a>
+          ))}
+        </div>
+
+        <p class="font-display italic text-sage text-lg mt-8">
+          They've been where you are. Here's what they figured out.
+        </p>
+      </div>
+      <svg class="absolute bottom-0 left-0 w-full" viewBox="0 0 1440 120" preserveAspectRatio="none" style="height:100px">
+        <path d="M0,64 C240,96 480,96 720,64 C960,32 1200,32 1440,64 L1440,120 L0,120 Z" fill="var(--color-warm)"/>
+      </svg>
+    </section>
+
+    <!-- ═══ CREDIBILITY STATS BAR ═══ -->
+    <section class="mt-stats bg-warm">
+      <div class="max-w-6xl mx-auto px-6">
+        <div class="mt-stats-grid">
+          {stats.map((stat, i) => (
+            <div class="mt-stat mt-reveal" style={`animation-delay: ${i * 0.08}s`}>
+              <span class="mt-stat-icon">{stat.icon}</span>
+              <span class="mt-stat-value">{stat.value}</span>
+              <span class="mt-stat-label">{stat.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ TEAM PHILOSOPHY ═══ -->
+    <section class="mt-section bg-warm">
+      <div class="max-w-4xl mx-auto px-6">
+        <div class="text-center mb-6 mt-reveal">
+          <h2 class="font-display font-bold text-4xl md:text-5xl text-forest-dark mb-5">
+            We've all been there.
+          </h2>
+          <p class="font-hand text-lg text-ink-light max-w-2xl mx-auto leading-relaxed mb-10">
+            Forgot a birthday. Missed a deadline. Showed up to the wrong meeting. Lost the permission slip. We're not productivity gurus &mdash; we're people who got tired of dropping the ball and decided to do something about it.
+          </p>
+        </div>
+        <div class="mt-why-grid">
+          <div class="mt-why-card mt-reveal">
+            <span class="mt-why-num">01</span>
+            <h3 class="font-display font-bold text-xl text-forest-dark mb-2">The Teacher</h3>
+            <p class="font-hand text-ink-light leading-relaxed">130 students, grading deadlines, parent conferences, and a life outside school. Maya figured out how to stop bringing work home at midnight.</p>
+          </div>
+          <div class="mt-why-card mt-reveal">
+            <span class="mt-why-num">02</span>
+            <h3 class="font-display font-bold text-xl text-forest-dark mb-2">The Overthinker</h3>
+            <p class="font-hand text-ink-light leading-relaxed">David knows exactly what he should do and still doesn't do it. He studied why &mdash; then built the trick that actually makes you start.</p>
+          </div>
+          <div class="mt-why-card mt-reveal">
+            <span class="mt-why-num">03</span>
+            <h3 class="font-display font-bold text-xl text-forest-dark mb-2">The App Junkie</h3>
+            <p class="font-hand text-ink-light leading-relaxed">Rachel has tried every to-do app, planner, and system out there. Most of them are solving the wrong problem. She'll tell you which ones aren't.</p>
+          </div>
+          <div class="mt-why-card mt-reveal">
+            <span class="mt-why-num">04</span>
+            <h3 class="font-display font-bold text-xl text-forest-dark mb-2">The Burned-Out Dad</h3>
+            <p class="font-hand text-ink-light leading-relaxed">James was working 70-hour weeks and still forgetting his kid's recital. The wall he hit taught him that busy isn't the same as productive.</p>
+          </div>
+          <div class="mt-why-card mt-reveal">
+            <span class="mt-why-num">05</span>
+            <h3 class="font-display font-bold text-xl text-forest-dark mb-2">The Automator</h3>
+            <p class="font-hand text-ink-light leading-relaxed">Kai got tired of copying things between apps and calendars. If a computer can do it, why are you doing it? That's Kai's whole philosophy.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ AUTHOR SHOWCASES ═══ -->
+    {sorted.map((author, i) => {
+      const { name, role, bio, avatar, expertise, sales } = author.data;
+      const accent = sales?.accentColor || '#8b4513';
+      const isEven = i % 2 === 0;
+      const avatarSrc = imgUrl(avatar, { w: 600, h: 700, fit: 'crop', crop: 'faces' });
+      const firstName = name.split(' ')[0];
+      return (
+        <section class={`mt-showcase ${isEven ? 'mt-showcase-left' : 'mt-showcase-right'}`} style={`--showcase-accent: ${accent}`}>
+          {/* Wave top */}
+          {i === 0 && (
+            <svg class="absolute top-0 left-0 w-full" viewBox="0 0 1440 80" preserveAspectRatio="none" style="height:80px;transform:scaleY(-1)">
+              <path d="M0,40 C360,70 720,10 1080,40 C1260,55 1380,45 1440,40 L1440,80 L0,80 Z" fill="var(--color-warm)"/>
+            </svg>
+          )}
+
+          <div class="mt-showcase-inner">
+            {/* Photo side */}
+            <div class="mt-showcase-photo mt-reveal">
+              <div class="mt-photo-frame" style={`--frame-accent: ${accent}`}>
+                <img src={avatarSrc} width="600" height="700" alt={name} loading="lazy" />
+                <div class="mt-photo-overlay"></div>
+              </div>
+            </div>
+
+            {/* Content side */}
+            <div class="mt-showcase-content mt-reveal">
+              <div class="mt-showcase-role-line">
+                <span class="mt-showcase-dash" style={`background: ${accent}`}></span>
+                <span class="font-mono text-xs tracking-widest uppercase" style={`color: ${accent}`}>{role}</span>
+              </div>
+              <h2 class="font-display font-bold text-forest-dark mb-3" style="font-size:clamp(2.2rem,4.5vw,3.2rem);line-height:1.1">
+                {name}
+              </h2>
+              <div class="flex flex-wrap gap-1.5 mb-5">
+                {expertise.map(tag => (
+                  <span class="mt-expertise-tag" style={`--tag-accent: ${accent}`}>{tag}</span>
+                ))}
+              </div>
+
+              {sales?.heroQuote ? (
+                <blockquote class="mt-showcase-quote">
+                  <span class="mt-showcase-quote-mark" style={`color: ${accent}`}>&ldquo;</span>
+                  {sales.heroQuote}
+                </blockquote>
+              ) : (
+                <p class="font-hand text-ink-light text-lg leading-relaxed mb-6">{bio}</p>
+              )}
+
+              {/* Key insight preview */}
+              {sales?.insights?.[0] && (
+                <div class="mt-insight-preview">
+                  <span class="mt-insight-preview-icon">{sales.insights[0].icon}</span>
+                  <div>
+                    <p class="font-display font-bold text-forest-dark text-sm">{sales.insights[0].title}</p>
+                    <p class="font-hand text-ink-muted text-sm leading-snug">{sales.insights[0].description.substring(0, 120)}...</p>
+                  </div>
+                </div>
+              )}
+
+              <a href={`/authors/${author.id}`} class="mt-read-more" style={`--link-accent: ${accent}`}>
+                Read {firstName}'s full story
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"/></svg>
+              </a>
+            </div>
+          </div>
+
+          {/* Wave bottom on last item */}
+          {i === sorted.length - 1 && (
+            <svg class="absolute bottom-0 left-0 w-full" viewBox="0 0 1440 80" preserveAspectRatio="none" style="height:80px">
+              <path d="M0,40 C360,70 720,10 1080,40 C1260,55 1380,45 1440,40 L1440,80 L0,80 Z" fill="var(--color-warm)"/>
+            </svg>
+          )}
+        </section>
+      );
+    })}
+
+    <!-- ═══ PRODUCT TIE-IN ═══ -->
+    <section class="mt-product bg-warm">
+      <div class="max-w-5xl mx-auto px-6">
+        <div class="text-center mb-14 mt-reveal">
+          <h2 class="font-display font-bold text-4xl md:text-5xl text-forest-dark mb-5">
+            What they figured out &mdash; built into your morning.
+          </h2>
+          <p class="font-hand text-lg text-ink-light max-w-2xl mx-auto leading-relaxed">
+            Every hard-won lesson from our writers is baked into how ThinkDone plans your day. You don't need to read a single article &mdash; just show up for 15 minutes and let it work.
+          </p>
+        </div>
+        <div class="mt-product-grid">
+          <div class="mt-product-card mt-reveal">
+            <div class="mt-product-icon" style="background: rgba(106,90,205,0.1);">
+              <svg class="w-6 h-6" style="color: #6a5acd" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+            </div>
+            <h3 class="font-display font-bold text-xl text-forest-dark mb-2">Beat Procrastination</h3>
+            <p class="font-hand text-ink-light leading-relaxed text-sm">David figured out why new systems always collapse around week three. ThinkDone is designed for the days you don't feel like it.</p>
+          </div>
+          <div class="mt-product-card mt-reveal">
+            <div class="mt-product-icon" style="background: rgba(42,157,143,0.1);">
+              <svg class="w-6 h-6" style="color: #2a9d8f" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+            </div>
+            <h3 class="font-display font-bold text-xl text-forest-dark mb-2">Stop Overcommitting</h3>
+            <p class="font-hand text-ink-light leading-relaxed text-sm">Maya learned to stop saying yes to everything. ThinkDone's "day ends here" line shows you exactly how much fits &mdash; before you overpromise.</p>
+          </div>
+          <div class="mt-product-card mt-reveal">
+            <div class="mt-product-icon" style="background: rgba(231,111,81,0.1);">
+              <svg class="w-6 h-6" style="color: #e76f51" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+            </div>
+            <h3 class="font-display font-bold text-xl text-forest-dark mb-2">Skip the App Circus</h3>
+            <p class="font-hand text-ink-light leading-relaxed text-sm">Rachel tried every planner and to-do app on the market. ThinkDone is deliberately simple &mdash; one list, no setup, nothing to configure.</p>
+          </div>
+          <div class="mt-product-card mt-reveal">
+            <div class="mt-product-icon" style="background: rgba(74,111,165,0.1);">
+              <svg class="w-6 h-6" style="color: #4a6fa5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <h3 class="font-display font-bold text-xl text-forest-dark mb-2">Never Forget Again</h3>
+            <p class="font-hand text-ink-light leading-relaxed text-sm">James kept dropping commitments &mdash; birthdays, follow-ups, promises. ThinkDone's memory catches everything so nothing slips through.</p>
+          </div>
+          <div class="mt-product-card mt-reveal">
+            <div class="mt-product-icon" style="background: rgba(78,205,196,0.1);">
+              <svg class="w-6 h-6" style="color: #4ecdc4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <h3 class="font-display font-bold text-xl text-forest-dark mb-2">Let the Computer Do It</h3>
+            <p class="font-hand text-ink-light leading-relaxed text-sm">Kai believes if you're manually copying things between calendars and apps, something is broken. ThinkDone connects the dots for you.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ TESTIMONIAL / TEAM QUOTE ═══ -->
+    <section class="mt-section bg-paper mt-graph-bg">
+      <div class="max-w-3xl mx-auto px-6 text-center mt-reveal">
+        <blockquote class="mt-team-quote">
+          <p class="font-display italic text-3xl md:text-4xl text-ink-light leading-snug mb-8">
+            We kept forgetting things, missing deadlines, and feeling behind. So we built the tool we all wished we'd had &mdash; one that remembers everything and tells you what to do next.
+          </p>
+        </blockquote>
+        <div class="mt-team-avatars">
+          {sorted.map(author => (
+            <img src={imgUrl(author.data.avatar, { w: 80, h: 80, fit: 'crop' })} width="40" height="40" alt={author.data.name} class="mt-team-tiny-avatar" />
+          ))}
+        </div>
+        <p class="font-ui text-sm text-ink-muted mt-4">The ThinkDone Team</p>
+      </div>
+    </section>
+
+    <!-- ═══ PRICING ═══ -->
+    <section id="pricing" class="mt-section bg-warm">
+      <div class="max-w-6xl mx-auto px-6">
+        <div class="text-center mb-14 mt-reveal">
+          <h2 class="font-display font-bold text-4xl md:text-5xl text-forest-dark mb-4">
+            Simple pricing. Serious clarity.
+          </h2>
+          <p class="font-hand text-xl text-ink-muted">
+            Start small or go all in. Every plan includes your AI planning dashboard.
+          </p>
+        </div>
+        <div class="mt-price-grid">
+          <!-- STARTER -->
+          <div class="mt-price-card mt-reveal">
+            <h3 class="font-display font-bold text-3xl text-forest-dark mb-2">Starter</h3>
+            <div class="mb-2">
+              <span class="font-display font-bold text-5xl text-forest-dark">$5</span>
+              <span class="font-ui text-ink-muted">/month</span>
+            </div>
+            <p class="font-hand text-ink-muted mb-6">Pay-as-you-go AI. Perfect for trying it out.</p>
+            <ul class="mt-price-features">
+              <li><svg class="w-5 h-5 text-success shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg><span>Interactive task dashboard</span></li>
+              <li><svg class="w-5 h-5 text-success shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg><span>AI planning meetings (pay per use)</span></li>
+              <li><svg class="w-5 h-5 text-success shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg><span>Basic memory system</span></li>
+              <li><svg class="w-5 h-5 text-success shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg><span>Up to 3 projects</span></li>
+            </ul>
+            <a href="#" class="mt-btn-outline">Get Started</a>
+          </div>
+          <!-- STANDARD -->
+          <div class="mt-price-card mt-reveal">
+            <h3 class="font-display font-bold text-3xl text-forest-dark mb-2">Standard</h3>
+            <div class="mb-2">
+              <span class="font-display font-bold text-5xl text-forest-dark">$27</span>
+              <span class="font-ui text-ink-muted">/month</span>
+            </div>
+            <p class="font-hand text-ink-muted mb-6">10 hours of AI planning. The daily driver.</p>
+            <ul class="mt-price-features">
+              <li><svg class="w-5 h-5 text-success shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg><span><strong>10 hours</strong> AI planning per month</span></li>
+              <li><svg class="w-5 h-5 text-success shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg><span>Persistent memory system</span></li>
+              <li><svg class="w-5 h-5 text-success shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg><span>Unlimited projects</span></li>
+              <li><svg class="w-5 h-5 text-success shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg><span>GTD methodology built in</span></li>
+            </ul>
+            <a href="#" class="mt-btn-outline">Try It for a Buck</a>
+          </div>
+          <!-- PRO -->
+          <div class="mt-price-card mt-price-pro mt-reveal">
+            <div class="mt-price-badge">Most Popular</div>
+            <h3 class="font-display font-bold text-3xl text-forest-dark mb-2">Pro</h3>
+            <div class="mb-2">
+              <span class="font-display font-bold text-5xl text-forest-dark">$45</span>
+              <span class="font-ui text-ink-muted">/month</span>
+            </div>
+            <p class="font-hand text-ink-muted mb-6">40 hours of AI. For power users who delegate.</p>
+            <ul class="mt-price-features">
+              <li><svg class="w-5 h-5 text-success shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg><span><strong>40 hours</strong> AI planning per month</span></li>
+              <li><svg class="w-5 h-5 text-success shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg><span>Everything in Standard, plus:</span></li>
+              <li><svg class="w-5 h-5 text-success shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg><span>OpenClaw integration</span></li>
+              <li><svg class="w-5 h-5 text-success shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg><span>Automation connectors</span></li>
+              <li><svg class="w-5 h-5 text-success shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg><span>Priority support</span></li>
+            </ul>
+            <a href="#" class="mt-btn-gradient mt-btn-block">Try It for a Buck</a>
+          </div>
+        </div>
+        <div class="text-center mt-8 mt-reveal">
+          <div class="flex items-center justify-center gap-2 text-ink-muted">
+            <svg class="w-5 h-5 text-success" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 0 5.225-3.34 9.67-8 11.317C5.34 16.67 2 12.225 2 7c0-.682.057-1.35.166-2.001zm11.541 3.708a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/></svg>
+            <p class="font-ui text-sm">No contracts. No lock-in. Cancel anytime.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══ FINAL CTA ═══ -->
+    <section class="mt-final-cta">
+      <div class="mt-blob mt-blob-sage" style="width:600px;height:600px;top:-20%;right:-12%"></div>
+      <div class="mt-blob mt-blob-gold" style="width:500px;height:500px;bottom:-20%;left:-10%;animation-delay:-8s"></div>
+      <svg class="absolute top-0 left-0 w-full" viewBox="0 0 1440 120" preserveAspectRatio="none" style="height:120px;transform:scaleY(-1)">
+        <path d="M0,64 C240,96 480,96 720,64 C960,32 1200,32 1440,64 L1440,120 L0,120 Z" fill="var(--color-warm)"/>
+      </svg>
+      <div class="relative z-10 max-w-4xl mx-auto px-6 text-center mt-reveal">
+        <h2 class="font-display font-bold text-paper mb-6" style="font-size:clamp(2.8rem,7vw,5rem);line-height:1.1">
+          Stop planning.<br>Start doing.
+        </h2>
+        <p class="font-hand text-paper/60 text-xl md:text-2xl max-w-2xl mx-auto mb-10 leading-relaxed">
+          No more forgotten deadlines. No more lost permission slips. 15 minutes every morning, one clean list, and the peace of mind that nothing is slipping through the cracks.
+        </p>
+        <a href="/#pricing" class="mt-btn-gradient mt-btn-lg">Try It for a Buck</a>
+        <p class="font-ui text-paper/30 text-xs mt-6">$1 to start &middot; AI usage billed separately &middot; Cancel anytime</p>
+      </div>
+    </section>
+
+    <!-- ═══ FOOTER ═══ -->
+    <footer class="mt-footer">
+      <div class="mt-footer-inner">
+        <div class="flex items-center gap-3">
+          <img src="/favicon.png" alt="" width="32" height="32" class="rounded-lg">
+          <span class="font-display font-bold text-xl text-paper">Think<span style="opacity:0.35">-</span><span class="text-gold">Done</span><span class="text-paper/40">.ai</span></span>
+        </div>
+        <div class="flex items-center gap-6 font-ui text-sm text-paper/50">
+          <a href="/articles" class="hover:text-paper transition-colors">Articles</a>
+          <a href="/authors" class="hover:text-paper transition-colors">Authors</a>
+          <a href="/#pricing" class="hover:text-paper transition-colors">Pricing</a>
+        </div>
+        <div class="font-ui text-sm text-paper/40">
+          from <a href="https://xswarm.ai" class="text-gold hover:text-paper transition-colors" target="_blank" rel="noopener">xSwarm.ai</a>
+        </div>
+      </div>
+    </footer>
+
+  </div>
+
+  <script>
+    // Scroll reveal with stagger
+    const obs = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('visible');
+          obs.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.08, rootMargin: '0px 0px -60px 0px' });
+    document.querySelectorAll('.mt-reveal').forEach(el => obs.observe(el));
+    // Smooth scroll
+    document.querySelectorAll('a[href^="#"]').forEach(a => {
+      a.addEventListener('click', e => {
+        const t = document.querySelector(a.getAttribute('href'));
+        if (t) { e.preventDefault(); t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      });
+    });
+  </script>
+</BaseLayout>
+
+<style is:global>
+  /* ═══ MEET THE TEAM PAGE ═══ */
+  .mt-page {
+    font-family: var(--font-hand);
+    color: var(--color-ink);
+    overflow-x: hidden;
+    background: var(--color-warm);
+  }
+
+  /* ═══ SCROLL REVEAL ═══ */
+  .mt-reveal {
+    opacity: 0;
+    transform: translateY(32px);
+    transition: opacity 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94), transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  .mt-reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* ═══ BLOBS ═══ */
+  .mt-blob {
+    position: absolute;
+    border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+    filter: blur(70px);
+    opacity: 0.12;
+    pointer-events: none;
+    animation: mt-float 24s ease-in-out infinite;
+  }
+  .mt-blob-sage { background-color: var(--color-sage); }
+  .mt-blob-gold { background-color: var(--color-gold); }
+  @keyframes mt-float {
+    0%, 100% { transform: translate(0,0) rotate(0deg); }
+    33% { transform: translate(30px,-30px) rotate(120deg); }
+    66% { transform: translate(-25px,20px) rotate(240deg); }
+  }
+
+  .mt-graph-bg {
+    background-image:
+      linear-gradient(rgba(139,69,19,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(139,69,19,0.03) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  /* ═══ HERO ═══ */
+  .mt-hero {
+    position: relative; min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    background-color: var(--color-forest-dark);
+    overflow: hidden; padding: 7rem 1.5rem 8rem;
+  }
+  .mt-hero-glow {
+    position: absolute; top: 30%; left: 50%; width: 900px; height: 600px;
+    transform: translate(-50%,-50%);
+    background: radial-gradient(ellipse, rgba(184,134,11,0.06) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .mt-hero-grid {
+    position: absolute; inset: 0; pointer-events: none;
+    background-image:
+      linear-gradient(rgba(244,239,230,0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(244,239,230,0.035) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+
+  /* Avatar cluster */
+  .mt-avatar-cluster {
+    display: flex; justify-content: center; align-items: center;
+    gap: -0.5rem; margin-top: 2rem;
+  }
+  .mt-cluster-avatar {
+    display: block;
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid var(--color-forest-dark);
+    box-shadow: 0 0 0 2px var(--accent, var(--color-gold));
+    margin-left: -12px;
+    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+    opacity: 0;
+    transform: translateY(20px) scale(0.8);
+    animation: mt-avatar-pop 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    animation-delay: var(--delay, 0s);
+  }
+  .mt-cluster-avatar:first-child { margin-left: 0; }
+  .mt-cluster-avatar:hover {
+    transform: translateY(-8px) scale(1.15);
+    z-index: 10 !important;
+    box-shadow: 0 0 0 2px var(--accent), 0 12px 32px rgba(0,0,0,0.4);
+  }
+  .mt-cluster-avatar img {
+    width: 100%; height: 100%; object-fit: cover;
+  }
+  @keyframes mt-avatar-pop {
+    to { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  @media (min-width: 640px) {
+    .mt-cluster-avatar { width: 88px; height: 88px; margin-left: -8px; }
+  }
+
+  /* ═══ STATS BAR ═══ */
+  .mt-stats { padding: 3rem 0; }
+  .mt-stats-grid {
+    display: flex; flex-wrap: wrap; justify-content: center;
+    gap: 2rem 3rem;
+  }
+  .mt-stat {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 0.25rem; min-width: 100px;
+  }
+  .mt-stat-icon { font-size: 1.5rem; line-height: 1; }
+  .mt-stat-value {
+    font-family: var(--font-display); font-weight: 700;
+    font-size: 1.8rem; color: var(--color-forest-dark);
+    line-height: 1.1;
+  }
+  .mt-stat-label {
+    font-family: var(--font-ui); font-size: 0.72rem;
+    color: var(--color-ink-muted); text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* ═══ SECTIONS ═══ */
+  .mt-section { padding: 5rem 0; }
+  @media (min-width: 768px) { .mt-section { padding: 7rem 0; } }
+  .bg-warm { background-color: var(--color-warm); }
+  .bg-paper { background-color: var(--color-paper); }
+
+  /* ═══ WHY GRID ═══ */
+  .mt-why-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1.25rem;
+  }
+  .mt-why-card {
+    background: var(--color-paper);
+    border-radius: 0.75rem;
+    padding: 1.75rem;
+    border: 1px solid var(--color-ink-faint);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    position: relative;
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  .mt-why-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,0.08); }
+  .mt-why-num {
+    font-family: var(--font-display); font-weight: 700;
+    font-size: 2.5rem; line-height: 1;
+    color: var(--color-ink-faint);
+    position: absolute; top: 1rem; right: 1.25rem;
+  }
+
+  /* ═══ AUTHOR SHOWCASES ═══ */
+  .mt-showcase {
+    position: relative;
+    padding: 4rem 0;
+    overflow: hidden;
+  }
+  .mt-showcase:nth-child(odd of .mt-showcase) {
+    background: var(--color-paper);
+  }
+  .mt-showcase:nth-child(even of .mt-showcase) {
+    background: var(--color-warm);
+  }
+  .mt-showcase-inner {
+    max-width: 72rem;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 3rem;
+    align-items: center;
+  }
+  @media (min-width: 860px) {
+    .mt-showcase-inner {
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+    }
+    .mt-showcase-left .mt-showcase-photo { order: 1; }
+    .mt-showcase-left .mt-showcase-content { order: 2; }
+    .mt-showcase-right .mt-showcase-photo { order: 2; }
+    .mt-showcase-right .mt-showcase-content { order: 1; }
+  }
+
+  /* Photo frame */
+  .mt-photo-frame {
+    position: relative;
+    border-radius: 1rem;
+    overflow: hidden;
+    aspect-ratio: 5/6;
+    box-shadow:
+      0 20px 60px rgba(0,0,0,0.15),
+      0 0 0 1px rgba(0,0,0,0.05);
+    transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.5s;
+  }
+  .mt-photo-frame:hover {
+    transform: scale(1.02) translateY(-4px);
+    box-shadow:
+      0 28px 80px rgba(0,0,0,0.2),
+      0 0 0 1px rgba(0,0,0,0.05);
+  }
+  .mt-photo-frame img {
+    width: 100%; height: 100%; object-fit: cover;
+    transition: transform 0.6s;
+  }
+  .mt-photo-frame:hover img { transform: scale(1.04); }
+  .mt-photo-overlay {
+    position: absolute; inset: 0;
+    background: linear-gradient(
+      to bottom,
+      transparent 50%,
+      rgba(15,31,24,0.3) 100%
+    );
+    pointer-events: none;
+  }
+
+  /* Showcase content */
+  .mt-showcase-role-line {
+    display: flex; align-items: center; gap: 0.75rem;
+    margin-bottom: 0.75rem;
+  }
+  .mt-showcase-dash {
+    display: block; width: 2rem; height: 3px;
+    border-radius: 2px;
+  }
+  .mt-expertise-tag {
+    display: inline-block;
+    padding: 0.15rem 0.6rem;
+    border-radius: 9999px;
+    font-family: var(--font-ui);
+    font-size: 0.68rem;
+    font-weight: 500;
+    background: color-mix(in srgb, var(--tag-accent, var(--color-accent)) 8%, transparent);
+    color: var(--tag-accent, var(--color-accent));
+    border: 1px solid color-mix(in srgb, var(--tag-accent, var(--color-accent)) 20%, transparent);
+  }
+  .mt-showcase-quote {
+    font-family: var(--font-display);
+    font-style: italic;
+    font-size: clamp(1.1rem, 2.5vw, 1.35rem);
+    color: var(--color-ink-light);
+    line-height: 1.55;
+    margin-bottom: 1.5rem;
+    position: relative;
+    padding-left: 1.25rem;
+    border-left: 3px solid var(--showcase-accent, var(--color-accent));
+  }
+  .mt-showcase-quote-mark {
+    font-size: 2em;
+    line-height: 0;
+    vertical-align: -0.2em;
+    font-style: normal;
+  }
+
+  /* Insight preview */
+  .mt-insight-preview {
+    display: flex; align-items: flex-start; gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    background: var(--color-paper-bright);
+    border-radius: 0.6rem;
+    border: 1px solid var(--color-ink-faint);
+    margin-bottom: 1.5rem;
+  }
+  .mt-insight-preview-icon {
+    font-size: 1.4rem; flex-shrink: 0; line-height: 1;
+  }
+
+  /* Read more link */
+  .mt-read-more {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    font-family: var(--font-ui);
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: var(--link-accent, var(--color-accent));
+    text-decoration: none;
+    transition: gap 0.3s, color 0.2s;
+  }
+  .mt-read-more:hover { gap: 0.85rem; }
+  .mt-read-more svg { transition: transform 0.3s; }
+  .mt-read-more:hover svg { transform: translateX(3px); }
+
+  /* ═══ PRODUCT TIE-IN ═══ */
+  .mt-product { padding: 6rem 0; }
+  @media (min-width: 768px) { .mt-product { padding: 8rem 0; } }
+  .mt-product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.25rem;
+  }
+  .mt-product-card {
+    background: var(--color-paper);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    border: 1px solid var(--color-ink-faint);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  .mt-product-card:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(58,107,78,0.1); }
+  .mt-product-icon {
+    width: 2.75rem; height: 2.75rem; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 0.75rem;
+  }
+
+  /* ═══ TEAM QUOTE ═══ */
+  .mt-team-quote {
+    position: relative;
+    padding: 0 2rem;
+  }
+  .mt-team-quote::before {
+    content: '\201C';
+    position: absolute; top: -0.5rem; left: -0.5rem;
+    font-family: var(--font-display);
+    font-size: 6rem; line-height: 1;
+    color: var(--color-ink-faint);
+    opacity: 0.3;
+  }
+  .mt-team-avatars {
+    display: flex; justify-content: center; gap: 0.5rem;
+    margin-top: 1.5rem;
+  }
+  .mt-team-tiny-avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--color-rule);
+    transition: transform 0.3s;
+  }
+  .mt-team-tiny-avatar:hover { transform: scale(1.15); }
+
+  /* ═══ PRICING ═══ */
+  .mt-price-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem; max-width: 64rem; margin: 0 auto;
+  }
+  @media (max-width: 768px) { .mt-price-grid { grid-template-columns: 1fr; max-width: 24rem; margin: 0 auto; } }
+  .mt-price-card {
+    background: var(--color-paper); border-radius: 1rem;
+    padding: 2rem; border: 2px solid var(--color-ink-faint);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+    position: relative; transition: transform 0.2s, box-shadow 0.2s;
+  }
+  .mt-price-card:hover { transform: translateY(-4px); box-shadow: 0 8px 32px rgba(0,0,0,0.1); }
+  .mt-price-pro {
+    border-color: var(--color-gold);
+    box-shadow: 0 4px 24px rgba(184,134,11,0.15);
+  }
+  .mt-price-pro:hover { box-shadow: 0 8px 36px rgba(184,134,11,0.25); }
+  .mt-price-badge {
+    position: absolute; top: -0.75rem; left: 50%; transform: translateX(-50%);
+    background: linear-gradient(135deg, var(--color-gold), #d4a544);
+    color: #fff; padding: 0.25rem 1rem; border-radius: 9999px;
+    font-family: var(--font-ui); font-size: 0.7rem;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+    white-space: nowrap;
+  }
+  .mt-price-features {
+    list-style: none; padding: 0; margin: 0 0 2rem;
+  }
+  .mt-price-features li {
+    display: flex; align-items: flex-start; gap: 0.75rem;
+    padding: 0.5rem 0; font-family: var(--font-hand);
+    color: var(--color-ink-light); border-bottom: 1px solid rgba(196,181,160,0.2);
+  }
+  .mt-price-features li:last-child { border-bottom: none; }
+
+  /* ═══ BUTTONS ═══ */
+  .mt-btn-gradient {
+    display: inline-block;
+    background: linear-gradient(135deg, var(--color-accent), var(--color-gold));
+    color: #fff;
+    padding: 0.8rem 2rem;
+    border-radius: 0.5rem;
+    font-family: var(--font-ui);
+    font-weight: 600;
+    font-size: 1.1rem;
+    text-decoration: none;
+    transition: opacity 0.2s, transform 0.2s, box-shadow 0.2s;
+    box-shadow: 0 4px 16px rgba(139,69,19,0.3);
+  }
+  .mt-btn-gradient:hover { opacity: 0.9; transform: translateY(-2px); box-shadow: 0 6px 24px rgba(139,69,19,0.4); }
+  .mt-btn-lg { font-size: 1.25rem; padding: 1rem 3rem; }
+  .mt-btn-block { display: block; width: 100%; text-align: center; }
+  .mt-btn-outline {
+    display: block; width: 100%; text-align: center;
+    border: 2px solid var(--color-accent);
+    color: var(--color-accent);
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-family: var(--font-ui);
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.2s;
+  }
+  .mt-btn-outline:hover { background: var(--color-accent); color: #fff; }
+
+  /* ═══ FINAL CTA ═══ */
+  .mt-final-cta {
+    position: relative; padding: 8rem 0;
+    background-color: var(--color-forest-dark);
+    text-align: center; overflow: hidden;
+  }
+
+  /* ═══ FOOTER ═══ */
+  .mt-footer {
+    background: var(--color-forest-darkest);
+    padding: 2.5rem 0;
+  }
+  .mt-footer-inner {
+    max-width: 78rem; margin: 0 auto; padding: 0 1.5rem;
+    display: flex; flex-wrap: wrap;
+    justify-content: space-between; align-items: center;
+    gap: 1rem;
+  }
+</style>

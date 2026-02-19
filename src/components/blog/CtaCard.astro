@@ -1,0 +1,386 @@
+---
+interface Props { variant?: 'default' | 'sidebar' | 'inline'; }
+const { variant = 'default' } = Astro.props;
+const isCompact = variant === 'sidebar';
+const rounded = variant === 'inline' ? 'rounded-xl my-8' : 'rounded-2xl';
+const pad = isCompact ? 'cta-pad-sm' : 'cta-pad-lg';
+---
+<div class:list={['cta-card', rounded, pad]} data-cta-root>
+  <!-- Atmosphere -->
+  <div class="cta-grid-overlay"></div>
+  <div class="cta-glow-orb"></div>
+  <div class="cta-glow-orb cta-glow-orb-2"></div>
+
+  <!-- Floating task particles -->
+  <div class="cta-particles" aria-hidden="true">
+    <span class="cta-particle cta-p1">&#x2713;</span>
+    <span class="cta-particle cta-p2">&#x2713;</span>
+    <span class="cta-particle cta-p3">&#x25C6;</span>
+    <span class="cta-particle cta-p4">&#x2713;</span>
+    <span class="cta-particle cta-p5">&#x25C6;</span>
+  </div>
+
+  <!-- Logo pinned to top, extends behind text -->
+  <div class="cta-bg-logo" aria-hidden="true">
+    <img src="https://18441963.imgix.net/thinkdone/branding/icon-1024.png?auto=format,compress&q=80&w=400" width="400" height="400" alt="" class="cta-logo" />
+    <div class="cta-orbit"></div>
+    <div class="cta-orbit cta-orbit-2"></div>
+  </div>
+
+  <!-- Content pushed down so text overlaps bottom of icon -->
+  <div class="cta-content">
+    <!-- Rotating provocative headline -->
+    <h3 class="cta-headline" data-cta-headline></h3>
+
+    <!-- Rotating solution line -->
+    <p class="cta-subline" data-cta-subline></p>
+
+    <!-- Button with shimmer + rotating CTA -->
+    <a href="/#pricing" class="cta-button" data-cta-btn>
+      <span class="cta-button-shimmer"></span>
+      <span class="cta-button-text" data-cta-btntext>Try it — $1</span>
+      <span class="cta-button-arrow">&rarr;</span>
+    </a>
+
+    <p class="cta-fine">No credit card required &middot; Cancel anytime</p>
+  </div>
+</div>
+
+<script>
+  const LINES = [
+    { head: "What if your mornings planned themselves?", sub: "AI reads your projects, finds the signal, and hands you one clean list. You just execute.", btn: "Try it — $1" },
+    { head: "Your brain wasn't built for 47 priorities.", sub: "Let AI cut through the noise every morning. Fifteen minutes. Total clarity.", btn: "Get clarity now" },
+    { head: "Every unfinished task is a decision you're avoiding.", sub: "ThinkDone's AI makes the hard calls so you don't have to. One focused day, every day.", btn: "Ship more, stress less" },
+    { head: "The most productive people don't plan harder.", sub: "They plan smarter. An AI chief of staff that challenges your priorities and keeps you honest.", btn: "Meet your AI chief of staff" },
+    { head: "Busy is the enemy of done.", sub: "Stop spinning. Start shipping. AI planning that turns overwhelm into momentum.", btn: "Start shipping" },
+  ];
+
+  document.querySelectorAll('[data-cta-root]').forEach(root => {
+    const headEl = root.querySelector('[data-cta-headline]');
+    const subEl = root.querySelector('[data-cta-subline]');
+    const btnEl = root.querySelector('[data-cta-btntext]');
+    if (!headEl || !subEl) return;
+
+    let idx = Math.floor(Math.random() * LINES.length);
+    let current = LINES[idx];
+
+    function show() {
+      headEl.textContent = current.head;
+      subEl.textContent = current.sub;
+      if (btnEl) btnEl.textContent = current.btn;
+      headEl.style.opacity = '1';
+      subEl.style.opacity = '1';
+    }
+
+    function fadeOut() {
+      headEl.style.opacity = '0';
+      subEl.style.opacity = '0';
+    }
+
+    // Initial show
+    show();
+
+    // Rotate every 7 seconds with crossfade
+    setInterval(() => {
+      fadeOut();
+      setTimeout(() => {
+        idx = (idx + 1) % LINES.length;
+        current = LINES[idx];
+        show();
+      }, 600);
+    }, 7000);
+  });
+</script>
+
+<style>
+  .cta-card {
+    position: relative;
+    overflow: hidden;
+    background: var(--color-forest-dark);
+    text-align: center;
+  }
+  .cta-pad-lg { padding: 0 2.5rem 3rem; }
+  .cta-pad-sm { padding: 0 1.5rem 2rem; }
+
+  /* ── Atmosphere ── */
+  .cta-grid-overlay {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(244,239,230,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(244,239,230,0.03) 1px, transparent 1px);
+    background-size: 28px 28px;
+    pointer-events: none;
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black 20%, transparent 100%);
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 40%, black 20%, transparent 100%);
+  }
+  .cta-glow-orb {
+    position: absolute;
+    width: 500px;
+    height: 500px;
+    top: -40%;
+    left: 50%;
+    transform: translateX(-50%);
+    background: radial-gradient(ellipse, rgba(184,134,11,0.1) 0%, transparent 65%);
+    pointer-events: none;
+    animation: cta-drift 10s ease-in-out infinite;
+  }
+  .cta-glow-orb-2 {
+    width: 350px;
+    height: 350px;
+    top: auto;
+    bottom: -50%;
+    animation-delay: -5s;
+    background: radial-gradient(ellipse, rgba(58,107,78,0.08) 0%, transparent 65%);
+  }
+  @keyframes cta-drift {
+    0%, 100% { transform: translateX(-50%) translateY(0); }
+    50% { transform: translateX(-50%) translateY(15px); }
+  }
+
+  /* ── Floating particles ── */
+  .cta-particles {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .cta-particle {
+    position: absolute;
+    font-size: 0.65rem;
+    color: rgba(184,134,11,0.12);
+    animation: cta-float 20s linear infinite;
+  }
+  .cta-p1 { left: 8%; top: 70%; animation-duration: 22s; font-size: 0.7rem; color: rgba(184,134,11,0.15); }
+  .cta-p2 { left: 85%; top: 80%; animation-duration: 18s; animation-delay: -4s; }
+  .cta-p3 { left: 15%; top: 90%; animation-duration: 25s; animation-delay: -8s; font-size: 0.5rem; color: rgba(58,107,78,0.15); }
+  .cta-p4 { left: 75%; top: 95%; animation-duration: 20s; animation-delay: -12s; }
+  .cta-p5 { left: 50%; top: 85%; animation-duration: 28s; animation-delay: -16s; font-size: 0.45rem; color: rgba(58,107,78,0.12); }
+  @keyframes cta-float {
+    from { transform: translateY(0) rotate(0deg); opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    to { transform: translateY(-500px) rotate(45deg); opacity: 0; }
+  }
+
+  /* ── Content — pushed down so text overlaps lower icon ── */
+  .cta-content {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+    padding-top: 220px;
+  }
+
+  /* ── Logo — pinned to top center, visible, extends behind text ── */
+  .cta-bg-logo {
+    position: absolute;
+    top: -50px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 364px;
+    height: 440px;
+    z-index: 1;
+    pointer-events: none;
+  }
+  .cta-logo {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 364px;
+    height: auto;
+    object-fit: contain;
+    border: none;
+    border-radius: 0;
+    filter: drop-shadow(0 8px 30px rgba(0,0,0,0.5));
+    animation: cta-logo-breathe 6s ease-in-out infinite;
+  }
+  @keyframes cta-logo-breathe {
+    0%, 100% { filter: drop-shadow(0 8px 30px rgba(0,0,0,0.5)); }
+    50% { filter: drop-shadow(0 8px 40px rgba(184,134,11,0.35)); }
+  }
+
+  /* ── Orbits — centered on bulb globe (≈40% down the 364px icon) ── */
+  /* Globe center ≈ 146px from image top, globe diameter ≈ 226px */
+  /* Inner orbit: just outside globe, ~240px diameter */
+  .cta-orbit {
+    position: absolute;
+    width: 240px;
+    height: 240px;
+    top: 74px;
+    left: 50%;
+    margin-left: -120px;
+    border: 1.5px solid rgba(184,134,11,0.15);
+    border-radius: 50%;
+    animation: cta-spin 14s linear infinite;
+  }
+  .cta-orbit::after {
+    content: '';
+    position: absolute;
+    top: -3px;
+    left: 50%;
+    width: 6px;
+    height: 6px;
+    background: var(--color-gold);
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(184,134,11,0.7);
+  }
+  /* Outer orbit: wider ring */
+  .cta-orbit-2 {
+    width: 290px;
+    height: 290px;
+    top: 49px;
+    margin-left: -145px;
+    border-color: rgba(244,239,230,0.06);
+    animation-duration: 22s;
+    animation-direction: reverse;
+  }
+  .cta-orbit-2::after {
+    width: 4px;
+    height: 4px;
+    background: rgba(244,239,230,0.35);
+    box-shadow: 0 0 8px rgba(244,239,230,0.25);
+  }
+  @keyframes cta-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  /* ── Headlines ── */
+  .cta-headline {
+    font-family: var(--font-display);
+    font-weight: 700;
+    font-size: clamp(1.6rem, 4.5vw, 2.4rem);
+    color: var(--color-paper);
+    line-height: 1.2;
+    margin: 0 0 0.85rem;
+    max-width: 580px;
+    min-height: 2.4em;
+    transition: opacity 0.6s ease, transform 0.6s ease;
+    text-shadow:
+      0 0 8px rgba(15,31,24,1),
+      0 2px 20px rgba(15,31,24,1),
+      0 0 50px rgba(15,31,24,0.8);
+  }
+  .cta-subline {
+    font-family: var(--font-hand);
+    font-size: clamp(1rem, 2.2vw, 1.2rem);
+    color: rgba(244,239,230,0.6);
+    line-height: 1.6;
+    margin: 0 0 2.25rem;
+    max-width: 460px;
+    min-height: 3.2em;
+    transition: opacity 0.6s ease, transform 0.6s ease;
+    text-shadow:
+      0 0 6px rgba(15,31,24,1),
+      0 1px 16px rgba(15,31,24,1),
+      0 0 40px rgba(15,31,24,0.7);
+  }
+
+  /* ── Button ── */
+  .cta-button {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-family: var(--font-ui);
+    font-weight: 700;
+    font-size: 1.15rem;
+    color: #fff;
+    background: linear-gradient(135deg, var(--color-accent) 0%, #a0522d 100%);
+    padding: 1rem 2.5rem;
+    border-radius: 0.65rem;
+    text-decoration: none;
+    letter-spacing: 0.01em;
+    overflow: hidden;
+    box-shadow:
+      0 4px 20px rgba(139,69,19,0.35),
+      0 0 0 1px rgba(184,134,11,0.15);
+    transition: transform 0.25s, box-shadow 0.25s;
+    animation: cta-btn-pulse 3s ease-in-out infinite;
+  }
+  .cta-button-shimmer {
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      105deg,
+      transparent 40%,
+      rgba(255,255,255,0.15) 50%,
+      transparent 60%
+    );
+    animation: cta-shimmer 4s ease-in-out infinite;
+    pointer-events: none;
+  }
+  @keyframes cta-shimmer {
+    0%, 100% { left: -100%; }
+    50%, 60% { left: 100%; }
+  }
+  .cta-button:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow:
+      0 10px 40px rgba(139,69,19,0.45),
+      0 0 0 1px rgba(184,134,11,0.25);
+    animation-play-state: paused;
+  }
+  .cta-button-text {
+    position: relative;
+    z-index: 1;
+  }
+  .cta-button-arrow {
+    position: relative;
+    z-index: 1;
+    transition: transform 0.25s;
+    font-size: 1.2em;
+  }
+  .cta-button:hover .cta-button-arrow {
+    transform: translateX(5px);
+  }
+  @keyframes cta-btn-pulse {
+    0%, 100% { box-shadow: 0 4px 20px rgba(139,69,19,0.35), 0 0 0 1px rgba(184,134,11,0.15); }
+    50% { box-shadow: 0 4px 32px rgba(139,69,19,0.5), 0 0 0 1px rgba(184,134,11,0.2); }
+  }
+
+  /* ── Fine print ── */
+  .cta-fine {
+    font-family: var(--font-ui);
+    font-size: 0.72rem;
+    color: rgba(244,239,230,0.22);
+    margin: 1.25rem 0 0;
+    letter-spacing: 0.03em;
+  }
+
+  /* ── Mobile ── */
+  @media (max-width: 640px) {
+    .cta-pad-lg { padding: 0 1.5rem 2rem; }
+    .cta-content { padding-top: 170px; }
+    .cta-bg-logo { width: 280px; height: 340px; top: -40px; }
+    .cta-logo { width: 280px; }
+    .cta-orbit { width: 184px; height: 184px; margin-left: -92px; top: 20px; }
+    .cta-orbit-2 { width: 224px; height: 224px; margin-left: -112px; top: 0px; }
+    .cta-headline { min-height: auto; }
+    .cta-subline { min-height: auto; }
+    .cta-particles { display: none; }
+  }
+
+  /* ── Reduced motion ── */
+  @media (prefers-reduced-motion: reduce) {
+    .cta-particle,
+    .cta-orbit,
+    .cta-logo,
+    .cta-glow-orb,
+    .cta-button-shimmer,
+    .cta-button {
+      animation: none;
+    }
+    .cta-logo { filter: drop-shadow(0 8px 30px rgba(0,0,0,0.5)); }
+    .cta-headline, .cta-subline {
+      transition: opacity 0.3s ease;
+    }
+  }
+</style>

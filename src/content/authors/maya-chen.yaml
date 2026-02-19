@@ -1,0 +1,77 @@
+name: "Maya Chen"
+role: "Head of Productivity Research"
+bio: "Former systems engineer who spent a decade optimizing Fortune 500 workflows. Now obsessed with helping individuals apply the same rigor to their personal productivity."
+longBio: |
+  Maya spent ten years at companies like Boeing and Salesforce, where her job was to find bottlenecks in systems that moved millions of dollars a day. She got very good at it. Then one evening she realized she couldn't figure out what to make for dinner, had 47 unread personal emails, and hadn't called her mother in three weeks. The irony wasn't lost on her.
+
+  That moment sparked a career pivot. She started applying industrial systems thinking to personal productivity — not in the cringey "optimize your morning routine" way, but with genuine rigor. What actually reduces cognitive load? Which tools measurably improve follow-through? When does a productivity system become its own form of procrastination? Maya runs experiments, tracks data, and publishes what she finds — including the failures, which she considers more useful than the wins.
+
+  Her core belief is simple: productivity isn't about willpower or discipline. It's about building systems that make the right action the easy action. She tests every tool and method herself for at least 30 days before writing about it, because she's learned that first impressions are almost always wrong.
+avatar: "authors/maya-chen-v2.jpg"
+expertise:
+  - "GTD"
+  - "Time Blocking"
+  - "Systems Thinking"
+  - "Tool Reviews"
+personality: "Analytical, evidence-based, slightly nerdy. Loves data and benchmarks. Writes like a friendly engineer explaining something cool."
+social:
+  twitter: "@mayachen_prod"
+  linkedin: "mayachen-productivity"
+  website: "https://think-done.com/authors/maya-chen"
+featured: true
+sales:
+  tagline: "What if your productivity system was actually engineered?"
+  accentColor: "#2a9d8f"
+  heroQuote: "Most productivity advice is folk wisdom dressed up as science. I wanted to know what actually works — so I ran the experiments."
+  problem:
+    headline: "Your productivity system wasn't designed. It just happened."
+    description: "You cobbled it together from blog posts, podcast tips, and whatever app was trending. No wonder it breaks down under pressure."
+    painPoints:
+      - icon: "🔧"
+        text: "You've tried 5+ productivity apps and none of them stuck"
+      - icon: "📊"
+        text: "You have no idea which of your habits actually move the needle"
+      - icon: "🔄"
+        text: "You spend more time managing your system than doing actual work"
+      - icon: "😤"
+        text: "Every January you start fresh. By March you're back to chaos."
+  philosophy:
+    headline: "Productivity is engineering, not willpower."
+    description: "Maya applies the same rigor to your daily workflow that she used to optimize Fortune 500 supply chains. The difference? She tests everything for 30 days before recommending it."
+    principles:
+      - title: "Measure before you optimize"
+        description: "You can't improve what you don't track. Maya's reviews include real data — completion rates, time-to-task, cognitive load scores."
+      - title: "Systems beat discipline"
+        description: "If your productivity method requires you to be motivated every day, it's not a system. It's a wish. Real systems work on your worst days."
+      - title: "Test, don't trust"
+        description: "First impressions of productivity tools are almost always wrong. Maya uses every tool for 30+ days before writing a single word about it."
+  insights:
+    - title: "The 30-Day Ratchet"
+      description: "Why Maya won't review anything she hasn't used for a full month — and why your 3-day trial tells you nothing useful."
+      icon: "📅"
+    - title: "Cognitive Load Mapping"
+      description: "The industrial technique Maya adapted to measure how much mental energy your task system actually demands."
+      icon: "🧠"
+    - title: "The Bottleneck Principle"
+      description: "Your productivity is only as fast as its slowest constraint. Maya shows you how to find yours."
+      icon: "⚡"
+    - title: "Systems Thinking for Humans"
+      description: "How to apply feedback loops, throughput analysis, and constraint theory to your actual Tuesday afternoon."
+      icon: "🔄"
+  thinkdonePitch:
+    headline: "ThinkDone is what I'd build if I designed a productivity system from scratch."
+    description: "After testing 200+ tools and methodologies, I kept coming back to the same insight: the best system is one that does the thinking for you, then gets out of the way. ThinkDone does exactly that."
+    points:
+      - "AI planning eliminates the cognitive load of prioritization — the #1 bottleneck in personal productivity"
+      - "One ordered list removes decision fatigue throughout the day"
+      - "Memory system tracks patterns I'd need a spreadsheet to replicate manually"
+      - "15-minute morning meeting is the optimal planning time — I tested shorter and longer"
+  faq:
+    - q: "I'm already organized. Do I really need AI planning?"
+      a: "Being organized isn't the same as being optimized. Most organized people are efficient at working on the wrong things. ThinkDone challenges your priorities, not just your task list. In my testing, even highly organized people saw a 20-30% improvement in completing high-impact work."
+    - q: "How is ThinkDone different from the systems you review?"
+      a: "Most tools manage tasks — they're filing cabinets for your to-dos. ThinkDone is a strategic planning partner. It reads your full landscape, challenges your thinking, and builds your day. After reviewing everything else, this is the approach that actually survives contact with real life."
+    - q: "What methodology does ThinkDone use?"
+      a: "It incorporates GTD's capture-and-process model, time-blocking's focus on capacity, and constraint theory's emphasis on bottlenecks — but you don't need to know any of that. The AI handles the methodology. You just have a conversation and work your list."
+    - q: "Can I trust an AI to plan my day?"
+      a: "You're not handing control to an AI — you're having a strategic conversation with one. It surfaces data, challenges assumptions, and proposes a plan. You approve, adjust, and execute. Think of it as a very well-informed sparring partner, not an autopilot."
